@@ -431,7 +431,13 @@ async function initializeVoiceChat(username, roomId) {
             return true;
         } else {
             // Real mode - get user media and connect to server
+            console.log('Getting user media...');
             voiceChat.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log('Local stream obtained:', voiceChat.localStream);
+            console.log('Audio tracks:', voiceChat.localStream.getAudioTracks().length);
+            voiceChat.localStream.getAudioTracks().forEach(track => {
+                console.log('Audio track:', track.id, 'enabled:', track.enabled, 'muted:', track.muted);
+            });
             voiceChat.username = username;
             voiceChat.roomId = roomId;
             
@@ -461,15 +467,17 @@ async function connectToSignalingServer() {
         }, 10000); // 10 second timeout
         
         voiceChat.ws.onopen = () => {
-            console.log('Connected to signaling server');
+            console.log('Connected to signaling server at:', wsUrl);
             clearTimeout(connectionTimeout);
             
             // Join the room
-            voiceChat.ws.send(JSON.stringify({
+            const joinMessage = {
                 type: 'join-room',
                 roomId: voiceChat.roomId,
                 username: voiceChat.username
-            }));
+            };
+            console.log('Sending join-room message:', joinMessage);
+            voiceChat.ws.send(JSON.stringify(joinMessage));
             
             // Wait for room-joined confirmation before resolving
             const originalOnMessage = voiceChat.ws.onmessage;
@@ -499,12 +507,16 @@ async function connectToSignalingServer() {
 
 function handleSignalingMessage(event) {
     const data = JSON.parse(event.data);
+    console.log('Received signaling message:', data.type, data);
     
     switch (data.type) {
         case 'room-joined':
+            console.log('Room joined successfully. Local user ID:', data.userId);
+            console.log('Existing participants:', data.participants);
             voiceChat.localUserId = data.userId;
             data.participants.forEach(participant => {
                 if (participant.id !== voiceChat.localUserId) {
+                    console.log('Creating peer connection for existing participant:', participant.id, participant.username);
                     voiceChat.participants.set(participant.id, participant);
                     createPeerConnection(participant.id);
                 }
@@ -513,6 +525,7 @@ function handleSignalingMessage(event) {
             break;
             
         case 'user-joined':
+            console.log('User joined:', data.userId, data.username);
             voiceChat.participants.set(data.userId, { id: data.userId, username: data.username });
             createPeerConnection(data.userId);
             updateParticipantsList();
@@ -1100,7 +1113,9 @@ function updateUserMuteStatus(userId, isMuted) {
 }
 
 function testAudioConnection() {
+    alert('Test button clicked! Check console for details.');
     console.log('=== AUDIO CONNECTION TEST ===');
+    console.log('Test button clicked!');
     console.log('Local stream tracks:', voiceChat.localStream?.getTracks().length || 0);
     console.log('Peer connections:', voiceChat.peerConnections.size);
     console.log('Participants:', voiceChat.participants.size);
