@@ -20,7 +20,7 @@ let voiceChat = {
 };
 
 // Test mode - set to true to test without server
-const TEST_MODE = false;
+const TEST_MODE = true; // Set to true for testing with placeholder username
 
 // Server URLs - update these with your deployed server
 const LOCAL_SERVER_URL = 'ws://localhost:3000';
@@ -253,7 +253,7 @@ function showAppropriateUI() {
         
         mainContent.innerHTML = `
             <div class="moonmic-username-section">
-                <input type="text" id="moonmic-username" placeholder="Enter username" class="moonmic-username-input">
+                <input type="text" id="moonmic-username" placeholder="Enter username" class="moonmic-username-input" value="TestUser${Math.floor(Math.random() * 1000)}">
                 <button class="moonmic-join-btn" id="moonmic-join-btn">
                     Join
                 </button>
