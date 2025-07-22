@@ -57,6 +57,13 @@ wss.on('connection', (ws, req) => {
             switch (data.type) {
                 case 'join-room':
                     const { roomId, username } = data;
+                    
+                    // Validate required fields
+                    if (!roomId || !username) {
+                        log(`Invalid join-room data`, { clientId, roomId, username });
+                        return;
+                    }
+                    
                     currentUser = { id: clientId, username, ws, roomId };
                     currentRoom = roomId;
                     
@@ -104,54 +111,90 @@ wss.on('connection', (ws, req) => {
                     
                 case 'offer':
                     const { targetUserId, offer } = data;
+                    
+                    // Validate required fields
+                    if (!targetUserId || !offer) {
+                        log(`Invalid offer data`, { clientId, targetUserId, hasOffer: !!offer });
+                        return;
+                    }
+                    
                     const targetUser = rooms.get(currentRoom)?.get(targetUserId);
                     if (targetUser) {
-                        targetUser.ws.send(JSON.stringify({
-                            type: 'offer',
-                            fromUserId: clientId,
-                            offer
-                        }));
-                        log(`Sent offer`, { from: clientId, to: targetUserId });
+                        try {
+                            targetUser.ws.send(JSON.stringify({
+                                type: 'offer',
+                                fromUserId: clientId,
+                                offer
+                            }));
+                            log(`Sent offer`, { from: clientId, to: targetUserId });
+                        } catch (sendError) {
+                            log(`Failed to send offer message`, { error: sendError.message, targetUser: targetUserId });
+                        }
                     }
                     break;
                     
                 case 'answer':
                     const { fromUserId, answer } = data;
+                    
+                    // Validate required fields
+                    if (!fromUserId || !answer) {
+                        log(`Invalid answer data`, { clientId, fromUserId, hasAnswer: !!answer });
+                        return;
+                    }
+                    
                     const fromUser = rooms.get(currentRoom)?.get(fromUserId);
                     if (fromUser) {
-                        fromUser.ws.send(JSON.stringify({
-                            type: 'answer',
-                            fromUserId: clientId,
-                            answer
-                        }));
-                        log(`Sent answer`, { from: clientId, to: fromUserId });
+                        try {
+                            fromUser.ws.send(JSON.stringify({
+                                type: 'answer',
+                                fromUserId: clientId,
+                                answer
+                            }));
+                            log(`Sent answer`, { from: clientId, to: fromUserId });
+                        } catch (sendError) {
+                            log(`Failed to send answer message`, { error: sendError.message, targetUser: fromUserId });
+                        }
                     }
                     break;
                     
                 case 'ice-candidate':
                     const { targetUserId, candidate } = data;
                     
+                    // Validate required fields
+                    if (!candidate) {
+                        log(`Invalid ice-candidate data`, { clientId, hasCandidate: !!candidate });
+                        return;
+                    }
+                    
                     // Handle both old format (broadcast) and new format (targeted)
                     if (targetUserId) {
                         // New format: send to specific user
                         const targetUser = rooms.get(currentRoom)?.get(targetUserId);
                         if (targetUser) {
-                            targetUser.ws.send(JSON.stringify({
-                                type: 'ice-candidate',
-                                fromUserId: clientId,
-                                candidate
-                            }));
-                            log(`Sent ICE candidate to specific user`, { from: clientId, to: targetUserId });
+                            try {
+                                targetUser.ws.send(JSON.stringify({
+                                    type: 'ice-candidate',
+                                    fromUserId: clientId,
+                                    candidate
+                                }));
+                                log(`Sent ICE candidate to specific user`, { from: clientId, to: targetUserId });
+                            } catch (sendError) {
+                                log(`Failed to send targeted ICE candidate`, { error: sendError.message, targetUser: targetUserId });
+                            }
                         }
                     } else {
                         // Old format: broadcast to all other users (fallback)
                         rooms.get(currentRoom)?.forEach((user) => {
                             if (user.ws !== ws) {
-                                user.ws.send(JSON.stringify({
-                                    type: 'ice-candidate',
-                                    fromUserId: clientId,
-                                    candidate
-                                }));
+                                try {
+                                    user.ws.send(JSON.stringify({
+                                        type: 'ice-candidate',
+                                        fromUserId: clientId,
+                                        candidate
+                                    }));
+                                } catch (sendError) {
+                                    log(`Failed to send broadcast ICE candidate`, { error: sendError.message, targetUser: user.id });
+                                }
                             }
                         });
                         log(`Broadcasted ICE candidate`, { from: clientId });
@@ -160,13 +203,23 @@ wss.on('connection', (ws, req) => {
                     
                 case 'mute-toggle':
                     const { isMuted } = data;
+                    
+                    // Validate required fields
+                    if (typeof isMuted !== 'boolean') {
+                        log(`Invalid mute-toggle data`, { clientId, isMuted });
+                        return;
+                    }
                     rooms.get(currentRoom)?.forEach((user) => {
                         if (user.ws !== ws) {
-                            user.ws.send(JSON.stringify({
-                                type: 'user-mute-toggle',
-                                userId: clientId,
-                                isMuted
-                            }));
+                            try {
+                                user.ws.send(JSON.stringify({
+                                    type: 'user-mute-toggle',
+                                    userId: clientId,
+                                    isMuted
+                                }));
+                            } catch (sendError) {
+                                log(`Failed to send mute-toggle message`, { error: sendError.message, targetUser: user.id });
+                            }
                         }
                     });
                     log(`User mute toggle`, { userId: clientId, isMuted });
@@ -179,10 +232,14 @@ wss.on('connection', (ws, req) => {
                         
                         // Notify other users
                         room.forEach((user) => {
-                            user.ws.send(JSON.stringify({
-                                type: 'user-left',
-                                userId: clientId
-                            }));
+                            try {
+                                user.ws.send(JSON.stringify({
+                                    type: 'user-left',
+                                    userId: clientId
+                                }));
+                            } catch (sendError) {
+                                log(`Failed to send user-left message`, { error: sendError.message, targetUser: user.id });
+                            }
                         });
                         
                         // Clean up empty rooms
@@ -220,10 +277,14 @@ wss.on('connection', (ws, req) => {
             
             // Notify other users
             room.forEach((user) => {
-                user.ws.send(JSON.stringify({
-                    type: 'user-left',
-                    userId: clientId
-                }));
+                try {
+                    user.ws.send(JSON.stringify({
+                        type: 'user-left',
+                        userId: clientId
+                    }));
+                } catch (sendError) {
+                    log(`Failed to send disconnect notification`, { error: sendError.message, targetUser: user.id });
+                }
             });
             
             // Clean up empty rooms
