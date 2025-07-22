@@ -823,7 +823,7 @@ function updateParticipantsList() {
     // Add current user first
     html += `
         <div class="moonmic-user-item you">
-            <div class="moonmic-user-info">
+            <div class="moonmic-user-info moonmic-username-clickable">
                 <span>${voiceChat.username} (You)</span>
             </div>
             <div class="moonmic-user-status">
@@ -871,14 +871,14 @@ function updateParticipantsList() {
 }
 
 function setupUserControls() {
-    // Setup clickable usernames to show volume controls
+    // Setup clickable usernames to show/hide volume controls
     const clickableUsernames = document.querySelectorAll('.moonmic-username-clickable');
     clickableUsernames.forEach(username => {
         username.addEventListener('click', function(e) {
             // Prevent event bubbling to avoid conflicts
             e.stopPropagation();
             const userId = this.getAttribute('data-user-id');
-            showVolumeControls(userId);
+            toggleVolumeControls(userId);
         });
     });
     
@@ -891,17 +891,7 @@ function setupUserControls() {
             setUserVolume(userId, volume);
         });
         
-        // Hide controls when mouse is released
-        slider.addEventListener('mouseup', function() {
-            const userId = this.getAttribute('data-user-id');
-            setTimeout(() => hideVolumeControls(userId), 500); // Hide after 500ms delay
-        });
-        
-        // Hide controls when slider loses focus
-        slider.addEventListener('blur', function() {
-            const userId = this.getAttribute('data-user-id');
-            setTimeout(() => hideVolumeControls(userId), 200);
-        });
+        // Note: Removed auto-hide functionality - now controlled by manual toggle
     });
     
     // Setup mute buttons
@@ -912,6 +902,29 @@ function setupUserControls() {
             toggleUserMute(userId);
         });
     });
+}
+
+function toggleVolumeControls(userId) {
+    const userItem = document.querySelector(`.moonmic-user-item[data-user-id="${userId}"]`);
+    if (userItem) {
+        const controls = userItem.querySelector('.moonmic-user-controls');
+        if (controls) {
+            // Check if controls are currently visible
+            const isVisible = controls.style.display === 'flex';
+            
+            if (isVisible) {
+                // If visible, hide them
+                controls.style.display = 'none';
+            } else {
+                // If hidden, hide all others first, then show this one
+                const allControls = document.querySelectorAll('.moonmic-user-controls');
+                allControls.forEach(control => {
+                    control.style.display = 'none';
+                });
+                controls.style.display = 'flex';
+            }
+        }
+    }
 }
 
 function showVolumeControls(userId) {
