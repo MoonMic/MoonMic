@@ -1,0 +1,19 @@
+{
+  "name": "moonmic-voice-chat-server",
+  "version": "1.0.0",
+  "description": "WebRTC signaling server for MoonMic voice chat",
+  "main": "voice-chat-server.js",
+  "scripts": {
+    "start": "node voice-chat-server.js",
+    "dev": "nodemon voice-chat-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "keywords": ["webrtc", "voice-chat", "signaling"],
+  "author": "MoonMic",
+  "license": "MIT"
+} 
