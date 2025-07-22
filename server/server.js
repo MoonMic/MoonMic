@@ -23,6 +23,11 @@ app.get('/health', (req, res) => {
 // WebSocket server
 const wss = new WebSocket.Server({ server });
 
+// WebSocket server error handling
+wss.on('error', (error) => {
+    log('WebSocket server error:', { error: error.message, stack: error.stack });
+});
+
 // Store active rooms and their participants
 const rooms = new Map();
 const connections = new Map();
@@ -52,7 +57,7 @@ wss.on('connection', (ws, req) => {
                 return;
             }
             
-            log(`Received message`, { clientId, type: data.type, roomId: data.roomId });
+            log(`Received message`, { clientId, type: data.type, roomId: data.roomId || 'undefined' });
             
             switch (data.type) {
                 case 'join-room':
@@ -73,6 +78,10 @@ wss.on('connection', (ws, req) => {
                     }
                     
                     const room = rooms.get(roomId);
+                    if (!room) {
+                        log(`Room not found after creation`, { roomId, clientId });
+                        return;
+                    }
                     room.set(clientId, currentUser);
                     
                     // Notify all users in the room about the new user
@@ -93,7 +102,7 @@ wss.on('connection', (ws, req) => {
                     // Send current room participants to the new user
                     const participants = Array.from(room.values()).map(user => ({
                         id: user.id,
-                        username: user.username
+                        username: user.username || 'Unknown'
                     }));
                     
                     try {
@@ -305,6 +314,17 @@ wss.on('connection', (ws, req) => {
     });
 });
 
+// Global error handling
+process.on('uncaughtException', (error) => {
+    log('Uncaught Exception:', { error: error.message, stack: error.stack });
+    // Don't exit immediately, try to log and continue
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    log('Unhandled Rejection:', { reason: reason?.message || reason, promise });
+    // Don't exit immediately, try to log and continue
+});
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
     log('SIGTERM received, shutting down gracefully');
@@ -317,8 +337,27 @@ process.on('SIGTERM', () => {
     });
 });
 
+process.on('SIGINT', () => {
+    log('SIGINT received, shutting down gracefully');
+    wss.close(() => {
+        log('WebSocket server closed');
+        server.close(() => {
+            log('HTTP server closed');
+            process.exit(0);
+        });
+    });
+});
+
 const PORT = process.env.PORT || 3000;
+
+// HTTP server error handling
+server.on('error', (error) => {
+    log('HTTP server error:', { error: error.message, stack: error.stack });
+});
+
 server.listen(PORT, () => {
     log(`MoonMic voice chat server running on port ${PORT}`);
     log(`Health check available at http://localhost:${PORT}/health`);
+}).on('error', (error) => {
+    log('Server listen error:', { error: error.message, stack: error.stack });
 }); 
