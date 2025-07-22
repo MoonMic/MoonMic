@@ -114,16 +114,16 @@ wss.on('connection', (ws, req) => {
                     break;
                     
                 case 'ice-candidate':
-                    const { candidate } = data;
-                    rooms.get(currentRoom)?.forEach((user) => {
-                        if (user.ws !== ws) {
-                            user.ws.send(JSON.stringify({
-                                type: 'ice-candidate',
-                                fromUserId: clientId,
-                                candidate
-                            }));
-                        }
-                    });
+                    const { targetUserId, candidate } = data;
+                    const targetUser = rooms.get(currentRoom)?.get(targetUserId);
+                    if (targetUser) {
+                        targetUser.ws.send(JSON.stringify({
+                            type: 'ice-candidate',
+                            fromUserId: clientId,
+                            candidate
+                        }));
+                        log(`Sent ICE candidate`, { from: clientId, to: targetUserId });
+                    }
                     break;
                     
                 case 'mute-toggle':

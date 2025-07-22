@@ -604,8 +604,23 @@ async function createPeerConnection(remoteUserId) {
         document.body.appendChild(audioElement);
         
         // Ensure audio plays
-        audioElement.play().catch(error => {
+        audioElement.play().then(() => {
+            console.log('Audio started playing for user:', remoteUserId);
+        }).catch(error => {
             console.error('Failed to play audio for user:', remoteUserId, error);
+        });
+        
+        // Add event listeners for debugging
+        audioElement.addEventListener('play', () => {
+            console.log('Audio play event fired for user:', remoteUserId);
+        });
+        
+        audioElement.addEventListener('error', (e) => {
+            console.error('Audio error for user:', remoteUserId, e);
+        });
+        
+        audioElement.addEventListener('loadedmetadata', () => {
+            console.log('Audio metadata loaded for user:', remoteUserId, 'duration:', audioElement.duration);
         });
         
         console.log('Added remote audio for user:', remoteUserId, 'audio element:', audioElement);
@@ -672,8 +687,23 @@ async function handleOffer(fromUserId, offer) {
         document.body.appendChild(audioElement);
         
         // Ensure audio plays
-        audioElement.play().catch(error => {
+        audioElement.play().then(() => {
+            console.log('Audio started playing for user:', fromUserId);
+        }).catch(error => {
             console.error('Failed to play audio for user:', fromUserId, error);
+        });
+        
+        // Add event listeners for debugging
+        audioElement.addEventListener('play', () => {
+            console.log('Audio play event fired for user:', fromUserId);
+        });
+        
+        audioElement.addEventListener('error', (e) => {
+            console.error('Audio error for user:', fromUserId, e);
+        });
+        
+        audioElement.addEventListener('loadedmetadata', () => {
+            console.log('Audio metadata loaded for user:', fromUserId, 'duration:', audioElement.duration);
         });
         
         console.log('Added remote audio for user:', fromUserId, 'audio element:', audioElement);
@@ -824,14 +854,17 @@ function showVoiceChatUI() {
                 <div class="moonmic-voice-title">
                     
                 </div>
-                <div class="moonmic-voice-controls">
-                    <button class="moonmic-mute-btn" id="moonmic-mute-btn">
-                        🎤 Mute
-                    </button>
-                    <button class="moonmic-leave-btn" id="moonmic-leave-btn">
-                        Leave
-                    </button>
-                </div>
+                            <div class="moonmic-voice-controls">
+                <button class="moonmic-mute-btn" id="moonmic-mute-btn">
+                    🎤 Mute
+                </button>
+                <button class="moonmic-test-btn" id="moonmic-test-btn" title="Test audio connection">
+                    🔍 Test
+                </button>
+                <button class="moonmic-leave-btn" id="moonmic-leave-btn">
+                    Leave
+                </button>
+            </div>
             </div>
             <div class="moonmic-users-section">
                 <div class="moonmic-users-header">
@@ -851,10 +884,15 @@ function showVoiceChatUI() {
 
 function setupVoiceChatListeners() {
     const muteBtn = document.getElementById('moonmic-mute-btn');
+    const testBtn = document.getElementById('moonmic-test-btn');
     const leaveBtn = document.getElementById('moonmic-leave-btn');
     
     if (muteBtn) {
         muteBtn.addEventListener('click', toggleMute);
+    }
+    
+    if (testBtn) {
+        testBtn.addEventListener('click', testAudioConnection);
     }
     
     if (leaveBtn) {
@@ -1041,8 +1079,55 @@ function toggleUserMute(userId) {
 }
 
 function updateUserMuteStatus(userId, isMuted) {
+    console.log('Updating mute status for user:', userId, 'isMuted:', isMuted);
+    
+    // Update the participant's mute status
+    const participant = voiceChat.participants.get(userId);
+    if (participant) {
+        participant.isMuted = isMuted;
+        console.log('Updated participant mute status:', participant);
+    }
+    
     // Update the mute status in the UI
     updateParticipantsList();
+    
+    // Also update the audio element mute status
+    const audioElement = document.getElementById(`audio-${userId}`);
+    if (audioElement) {
+        audioElement.muted = isMuted;
+        console.log('Updated audio element mute status for user:', userId, 'muted:', isMuted);
+    }
+}
+
+function testAudioConnection() {
+    console.log('=== AUDIO CONNECTION TEST ===');
+    console.log('Local stream tracks:', voiceChat.localStream?.getTracks().length || 0);
+    console.log('Peer connections:', voiceChat.peerConnections.size);
+    console.log('Participants:', voiceChat.participants.size);
+    
+    voiceChat.peerConnections.forEach((pc, userId) => {
+        console.log(`Peer connection for ${userId}:`);
+        console.log('  - Connection state:', pc.connectionState);
+        console.log('  - ICE connection state:', pc.iceConnectionState);
+        console.log('  - ICE gathering state:', pc.iceGatheringState);
+        console.log('  - Remote tracks:', pc.getReceivers().length);
+    });
+    
+    voiceChat.participants.forEach((participant, userId) => {
+        const audioElement = document.getElementById(`audio-${userId}`);
+        console.log(`Audio element for ${participant.username} (${userId}):`);
+        console.log('  - Element exists:', !!audioElement);
+        if (audioElement) {
+            console.log('  - Ready state:', audioElement.readyState);
+            console.log('  - Paused:', audioElement.paused);
+            console.log('  - Muted:', audioElement.muted);
+            console.log('  - Volume:', audioElement.volume);
+            console.log('  - Current time:', audioElement.currentTime);
+            console.log('  - Duration:', audioElement.duration);
+            console.log('  - Has srcObject:', !!audioElement.srcObject);
+        }
+    });
+    console.log('=== END AUDIO TEST ===');
 }
 
 // Initialize overlay as hidden

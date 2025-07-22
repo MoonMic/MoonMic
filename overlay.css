@@ -390,6 +390,27 @@
     background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
 }
 
+.moonmic-test-btn {
+    background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+}
+
+.moonmic-test-btn:hover {
+    background: linear-gradient(135deg, #2980B9 0%, #1F5F8B 100%);
+    transform: translateY(-1px);
+}
+
 .moonmic-leave-btn {
     background: linear-gradient(135deg, #4A5568 0%, #2D3748 100%);
     color: white;
