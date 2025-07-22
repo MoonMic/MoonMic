@@ -119,15 +119,15 @@ wss.on('connection', (ws, req) => {
                     break;
                     
                 case 'offer':
-                    const { targetUserId, offer } = data;
+                    const { targetUserId: offerTargetUserId, offer } = data;
                     
                     // Validate required fields
-                    if (!targetUserId || !offer) {
-                        log(`Invalid offer data`, { clientId, targetUserId, hasOffer: !!offer });
+                    if (!offerTargetUserId || !offer) {
+                        log(`Invalid offer data`, { clientId, targetUserId: offerTargetUserId, hasOffer: !!offer });
                         return;
                     }
                     
-                    const targetUser = rooms.get(currentRoom)?.get(targetUserId);
+                    const targetUser = rooms.get(currentRoom)?.get(offerTargetUserId);
                     if (targetUser) {
                         try {
                             targetUser.ws.send(JSON.stringify({
@@ -135,9 +135,9 @@ wss.on('connection', (ws, req) => {
                                 fromUserId: clientId,
                                 offer
                             }));
-                            log(`Sent offer`, { from: clientId, to: targetUserId });
-                        } catch (sendError) {
-                            log(`Failed to send offer message`, { error: sendError.message, targetUser: targetUserId });
+                                                            log(`Sent offer`, { from: clientId, to: offerTargetUserId });
+                            } catch (sendError) {
+                                log(`Failed to send offer message`, { error: sendError.message, targetUser: offerTargetUserId });
                         }
                     }
                     break;
@@ -167,7 +167,7 @@ wss.on('connection', (ws, req) => {
                     break;
                     
                 case 'ice-candidate':
-                    const { targetUserId, candidate } = data;
+                    const { targetUserId: iceTargetUserId, candidate } = data;
                     
                     // Validate required fields
                     if (!candidate) {
@@ -176,9 +176,9 @@ wss.on('connection', (ws, req) => {
                     }
                     
                     // Handle both old format (broadcast) and new format (targeted)
-                    if (targetUserId) {
+                    if (iceTargetUserId) {
                         // New format: send to specific user
-                        const targetUser = rooms.get(currentRoom)?.get(targetUserId);
+                        const targetUser = rooms.get(currentRoom)?.get(iceTargetUserId);
                         if (targetUser) {
                             try {
                                 targetUser.ws.send(JSON.stringify({
@@ -186,9 +186,9 @@ wss.on('connection', (ws, req) => {
                                     fromUserId: clientId,
                                     candidate
                                 }));
-                                log(`Sent ICE candidate to specific user`, { from: clientId, to: targetUserId });
+                                log(`Sent ICE candidate to specific user`, { from: clientId, to: iceTargetUserId });
                             } catch (sendError) {
-                                log(`Failed to send targeted ICE candidate`, { error: sendError.message, targetUser: targetUserId });
+                                log(`Failed to send targeted ICE candidate`, { error: sendError.message, targetUser: iceTargetUserId });
                             }
                         }
                     } else {
