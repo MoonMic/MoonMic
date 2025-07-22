@@ -466,6 +466,9 @@
     border-radius: 4px;
     transition: all 0.2s ease;
     user-select: none;
+    display: flex;
+    align-items: center;
+    flex: 1;
 }
 
 .moonmic-username-clickable:hover {

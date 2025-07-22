@@ -253,7 +253,7 @@ function showAppropriateUI() {
         
         mainContent.innerHTML = `
             <div class="moonmic-username-section">
-                <input type="text" id="moonmic-username" placeholder="Enter username" class="moonmic-username-input" value="TestUser${Math.floor(Math.random() * 1000)}">
+                <input type="text" id="moonmic-username" placeholder="Enter username" class="moonmic-username-input" value="Test${Math.floor(Math.random() * 999)}" maxlength="8">
                 <button class="moonmic-join-btn" id="moonmic-join-btn">
                     Join
                 </button>
@@ -286,6 +286,11 @@ function setupJoinButtonListener() {
             
             if (!username) {
                 alert('Please enter a username');
+                return;
+            }
+            
+            if (username.length > 8) {
+                alert('Username must be 8 characters or less');
                 return;
             }
             
@@ -835,8 +840,8 @@ function updateParticipantsList() {
         
         html += `
             <div class="moonmic-user-item" data-user-id="${userId}">
-                <div class="moonmic-user-info">
-                    <span class="moonmic-username-clickable" data-user-id="${userId}">${participant.username}</span>
+                <div class="moonmic-user-info moonmic-username-clickable" data-user-id="${userId}">
+                    <span>${participant.username}</span>
                 </div>
                 <div class="moonmic-user-controls" style="display: none;">
                     <button class="moonmic-user-mute-btn" data-user-id="${userId}" title="Mute/Unmute user">
@@ -869,7 +874,9 @@ function setupUserControls() {
     // Setup clickable usernames to show volume controls
     const clickableUsernames = document.querySelectorAll('.moonmic-username-clickable');
     clickableUsernames.forEach(username => {
-        username.addEventListener('click', function() {
+        username.addEventListener('click', function(e) {
+            // Prevent event bubbling to avoid conflicts
+            e.stopPropagation();
             const userId = this.getAttribute('data-user-id');
             showVolumeControls(userId);
         });
