@@ -20,7 +20,7 @@ let voiceChat = {
 };
 
 // Test mode - set to true to test without server
-const TEST_MODE = true; // Set to true for testing with placeholder username
+const TEST_MODE = false; // Set to false for production with Railway server
 
 // Server URLs - update these with your deployed server
 const LOCAL_SERVER_URL = 'ws://localhost:3000';
@@ -253,7 +253,7 @@ function showAppropriateUI() {
         
         mainContent.innerHTML = `
             <div class="moonmic-username-section">
-                <input type="text" id="moonmic-username" placeholder="Enter username" class="moonmic-username-input" value="Test${Math.floor(Math.random() * 999)}" maxlength="8">
+                <input type="text" id="moonmic-username" placeholder="Enter username" class="moonmic-username-input" maxlength="8">
                 <button class="moonmic-join-btn" id="moonmic-join-btn">
                     Join
                 </button>
