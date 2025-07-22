@@ -477,7 +477,13 @@ async function connectToSignalingServer() {
                 username: voiceChat.username
             };
             console.log('Sending join-room message:', joinMessage);
-            voiceChat.ws.send(JSON.stringify(joinMessage));
+            try {
+                voiceChat.ws.send(JSON.stringify(joinMessage));
+            } catch (error) {
+                console.error('Failed to send join-room message:', error);
+                reject(new Error('Failed to send join message'));
+                return;
+            }
             
             // Wait for room-joined confirmation before resolving
             const originalOnMessage = voiceChat.ws.onmessage;
@@ -506,8 +512,18 @@ async function connectToSignalingServer() {
 }
 
 function handleSignalingMessage(event) {
-    const data = JSON.parse(event.data);
-    console.log('Received signaling message:', data.type, data);
+    try {
+        const data = JSON.parse(event.data);
+        console.log('Received signaling message:', data.type, data);
+    } catch (error) {
+        console.error('Failed to parse signaling message:', error, 'Raw message:', event.data);
+        return;
+    }
+    
+    if (!data || typeof data.type !== 'string') {
+        console.error('Invalid message format:', data);
+        return;
+    }
     
     switch (data.type) {
         case 'room-joined':
@@ -583,11 +599,15 @@ async function createPeerConnection(remoteUserId) {
     pc.onicecandidate = (event) => {
         if (event.candidate) {
             console.log('Sending ICE candidate for user:', remoteUserId);
-            voiceChat.ws.send(JSON.stringify({
-                type: 'ice-candidate',
-                targetUserId: remoteUserId,
-                candidate: event.candidate
-            }));
+            try {
+                voiceChat.ws.send(JSON.stringify({
+                    type: 'ice-candidate',
+                    targetUserId: remoteUserId,
+                    candidate: event.candidate
+                }));
+            } catch (error) {
+                console.error('Failed to send ICE candidate for user:', remoteUserId, error);
+            }
         }
     };
     
@@ -644,12 +664,16 @@ async function createPeerConnection(remoteUserId) {
         console.log('Creating offer for user:', remoteUserId);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        voiceChat.ws.send(JSON.stringify({
-            type: 'offer',
-            targetUserId: remoteUserId,
-            offer: offer
-        }));
-        console.log('Offer sent successfully for user:', remoteUserId);
+        try {
+            voiceChat.ws.send(JSON.stringify({
+                type: 'offer',
+                targetUserId: remoteUserId,
+                offer: offer
+            }));
+            console.log('Offer sent successfully for user:', remoteUserId);
+        } catch (error) {
+            console.error('Failed to send offer for user:', remoteUserId, error);
+        }
     } catch (error) {
         console.error('Error creating offer for user:', remoteUserId, error);
     }
@@ -667,10 +691,14 @@ async function handleOffer(fromUserId, offer) {
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
         if (event.candidate) {
-            voiceChat.ws.send(JSON.stringify({
-                type: 'ice-candidate',
-                candidate: event.candidate
-            }));
+            try {
+                voiceChat.ws.send(JSON.stringify({
+                    type: 'ice-candidate',
+                    candidate: event.candidate
+                }));
+            } catch (error) {
+                console.error('Failed to send ICE candidate in handleOffer for user:', fromUserId, error);
+            }
         }
     };
     
@@ -732,11 +760,15 @@ async function handleOffer(fromUserId, offer) {
         await pc.setLocalDescription(answer);
         console.log('Answer created and set for user:', fromUserId);
         
-        voiceChat.ws.send(JSON.stringify({
-            type: 'answer',
-            fromUserId: fromUserId,
-            answer: answer
-        }));
+        try {
+            voiceChat.ws.send(JSON.stringify({
+                type: 'answer',
+                fromUserId: fromUserId,
+                answer: answer
+            }));
+        } catch (error) {
+            console.error('Failed to send answer for user:', fromUserId, error);
+        }
         console.log('Answer sent to user:', fromUserId);
     } catch (error) {
         console.error('Error handling offer from user:', fromUserId, error);
@@ -797,10 +829,14 @@ function toggleMute() {
     
     // Notify other users (real mode only)
     if (!TEST_MODE && voiceChat.ws) {
-        voiceChat.ws.send(JSON.stringify({
-            type: 'mute-toggle',
-            isMuted: voiceChat.isMuted
-        }));
+        try {
+            voiceChat.ws.send(JSON.stringify({
+                type: 'mute-toggle',
+                isMuted: voiceChat.isMuted
+            }));
+        } catch (error) {
+            console.error('Failed to send mute-toggle message:', error);
+        }
     }
     
     // Update participants list to show mute status
@@ -833,7 +869,11 @@ function leaveVoiceChat() {
         
         // Close WebSocket connection (real mode only)
         if (voiceChat.ws) {
-            voiceChat.ws.send(JSON.stringify({ type: 'leave-room' }));
+            try {
+                voiceChat.ws.send(JSON.stringify({ type: 'leave-room' }));
+            } catch (error) {
+                console.error('Failed to send leave-room message:', error);
+            }
             voiceChat.ws.close();
             voiceChat.ws = null;
         }
