@@ -99,7 +99,10 @@ MoonMic/
 │   ├── DEPLOYMENT.md          # Complete deployment guide
 │   ├── RAILWAY_SETUP.md       # Railway-specific setup
 │   ├── FREE_DEPLOYMENT.md     # Free hosting options
-│   └── ICON_SETUP.md          # Icon setup instructions
+│   ├── ICON_SETUP.md          # Icon setup instructions
+│   ├── SECURITY.md            # Security policy and vulnerability reporting
+│   ├── SECURITY_AUDIT.md      # Security audit report
+│   └── PRIVACY.md             # Privacy policy and data handling
 └── 🛠️ Scripts
     ├── deploy.sh              # Deployment helper
     ├── prepare-railway.sh     # Railway preparation
