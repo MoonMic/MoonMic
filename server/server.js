@@ -45,6 +45,13 @@ wss.on('connection', (ws, req) => {
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
+            
+            // Validate message structure
+            if (!data || typeof data.type !== 'string') {
+                log(`Invalid message format`, { clientId, message: message.toString() });
+                return;
+            }
+            
             log(`Received message`, { clientId, type: data.type, roomId: data.roomId });
             
             switch (data.type) {
@@ -64,11 +71,15 @@ wss.on('connection', (ws, req) => {
                     // Notify all users in the room about the new user
                     room.forEach((user) => {
                         if (user.ws !== ws) {
-                            user.ws.send(JSON.stringify({
-                                type: 'user-joined',
-                                userId: clientId,
-                                username: username
-                            }));
+                            try {
+                                user.ws.send(JSON.stringify({
+                                    type: 'user-joined',
+                                    userId: clientId,
+                                    username: username
+                                }));
+                            } catch (sendError) {
+                                log(`Failed to send user-joined message`, { error: sendError.message, targetUser: user.id });
+                            }
                         }
                     });
                     
@@ -78,11 +89,15 @@ wss.on('connection', (ws, req) => {
                         username: user.username
                     }));
                     
-                    ws.send(JSON.stringify({
-                        type: 'room-joined',
-                        participants,
-                        userId: clientId
-                    }));
+                    try {
+                        ws.send(JSON.stringify({
+                            type: 'room-joined',
+                            participants,
+                            userId: clientId
+                        }));
+                    } catch (sendError) {
+                        log(`Failed to send room-joined message`, { error: sendError.message, clientId });
+                    }
                     
                     log(`User joined room`, { username, roomId, participantsCount: room.size });
                     break;
@@ -115,14 +130,31 @@ wss.on('connection', (ws, req) => {
                     
                 case 'ice-candidate':
                     const { targetUserId, candidate } = data;
-                    const targetUser = rooms.get(currentRoom)?.get(targetUserId);
-                    if (targetUser) {
-                        targetUser.ws.send(JSON.stringify({
-                            type: 'ice-candidate',
-                            fromUserId: clientId,
-                            candidate
-                        }));
-                        log(`Sent ICE candidate`, { from: clientId, to: targetUserId });
+                    
+                    // Handle both old format (broadcast) and new format (targeted)
+                    if (targetUserId) {
+                        // New format: send to specific user
+                        const targetUser = rooms.get(currentRoom)?.get(targetUserId);
+                        if (targetUser) {
+                            targetUser.ws.send(JSON.stringify({
+                                type: 'ice-candidate',
+                                fromUserId: clientId,
+                                candidate
+                            }));
+                            log(`Sent ICE candidate to specific user`, { from: clientId, to: targetUserId });
+                        }
+                    } else {
+                        // Old format: broadcast to all other users (fallback)
+                        rooms.get(currentRoom)?.forEach((user) => {
+                            if (user.ws !== ws) {
+                                user.ws.send(JSON.stringify({
+                                    type: 'ice-candidate',
+                                    fromUserId: clientId,
+                                    candidate
+                                }));
+                            }
+                        });
+                        log(`Broadcasted ICE candidate`, { from: clientId });
                     }
                     break;
                     
@@ -167,7 +199,17 @@ wss.on('connection', (ws, req) => {
                     log(`Unknown message type`, { type: data.type });
             }
         } catch (error) {
-            log(`Error processing message`, { error: error.message, clientId });
+            log(`Error processing message`, { error: error.message, clientId, messageType: data?.type });
+            // Send error response to client if possible
+            try {
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Failed to process message',
+                    details: error.message
+                }));
+            } catch (sendError) {
+                log(`Failed to send error response`, { error: sendError.message });
+            }
         }
     });
     
