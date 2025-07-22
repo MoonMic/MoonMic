@@ -33,8 +33,12 @@ const SERVER_URL = PRODUCTION_SERVER_URL; // Change to LOCAL_SERVER_URL for loca
 const rtcConfig = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-    ]
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+    ],
+    iceCandidatePoolSize: 10
 };
 
 // Create the overlay HTML
@@ -542,19 +546,33 @@ function handleSignalingMessage(event) {
 }
 
 async function createPeerConnection(remoteUserId) {
+    console.log('Creating peer connection for user:', remoteUserId);
     const pc = new RTCPeerConnection(rtcConfig);
     voiceChat.peerConnections.set(remoteUserId, pc);
     
     // Add local stream
     voiceChat.localStream.getTracks().forEach(track => {
+        console.log('Adding track to peer connection:', track.kind, track.id);
         pc.addTrack(track, voiceChat.localStream);
     });
+    
+    // Handle connection state changes
+    pc.onconnectionstatechange = () => {
+        console.log('Peer connection state changed for user:', remoteUserId, 'State:', pc.connectionState);
+    };
+    
+    // Handle ICE connection state changes
+    pc.oniceconnectionstatechange = () => {
+        console.log('ICE connection state changed for user:', remoteUserId, 'State:', pc.iceConnectionState);
+    };
     
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
         if (event.candidate) {
+            console.log('Sending ICE candidate for user:', remoteUserId);
             voiceChat.ws.send(JSON.stringify({
                 type: 'ice-candidate',
+                targetUserId: remoteUserId,
                 candidate: event.candidate
             }));
         }
@@ -563,6 +581,7 @@ async function createPeerConnection(remoteUserId) {
     // Handle remote stream
     pc.ontrack = (event) => {
         const remoteStream = event.streams[0];
+        console.log('Received remote stream for user:', remoteUserId, 'tracks:', remoteStream.getTracks().length);
         
         // Create audio element for remote audio
         const audioElement = document.createElement('audio');
@@ -570,6 +589,7 @@ async function createPeerConnection(remoteUserId) {
         audioElement.autoplay = true;
         audioElement.controls = false;
         audioElement.style.display = 'none';
+        audioElement.playsInline = true;
         
         // Set initial volume from user preferences
         const userVolume = voiceChat.userVolumes.get(remoteUserId) || 1.0;
@@ -583,11 +603,17 @@ async function createPeerConnection(remoteUserId) {
         // Add to page (hidden)
         document.body.appendChild(audioElement);
         
-        console.log('Added remote audio for user:', remoteUserId);
+        // Ensure audio plays
+        audioElement.play().catch(error => {
+            console.error('Failed to play audio for user:', remoteUserId, error);
+        });
+        
+        console.log('Added remote audio for user:', remoteUserId, 'audio element:', audioElement);
     };
     
     // Create and send offer
     try {
+        console.log('Creating offer for user:', remoteUserId);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         voiceChat.ws.send(JSON.stringify({
@@ -595,8 +621,9 @@ async function createPeerConnection(remoteUserId) {
             targetUserId: remoteUserId,
             offer: offer
         }));
+        console.log('Offer sent successfully for user:', remoteUserId);
     } catch (error) {
-        console.error('Error creating offer:', error);
+        console.error('Error creating offer for user:', remoteUserId, error);
     }
 }
 
@@ -622,6 +649,7 @@ async function handleOffer(fromUserId, offer) {
     // Handle remote stream
     pc.ontrack = (event) => {
         const remoteStream = event.streams[0];
+        console.log('Received remote stream for user:', fromUserId, 'tracks:', remoteStream.getTracks().length);
         
         // Create audio element for remote audio
         const audioElement = document.createElement('audio');
@@ -629,6 +657,7 @@ async function handleOffer(fromUserId, offer) {
         audioElement.autoplay = true;
         audioElement.controls = false;
         audioElement.style.display = 'none';
+        audioElement.playsInline = true;
         
         // Set initial volume from user preferences
         const userVolume = voiceChat.userVolumes.get(fromUserId) || 1.0;
@@ -642,43 +671,62 @@ async function handleOffer(fromUserId, offer) {
         // Add to page (hidden)
         document.body.appendChild(audioElement);
         
-        console.log('Added remote audio for user:', fromUserId);
+        // Ensure audio plays
+        audioElement.play().catch(error => {
+            console.error('Failed to play audio for user:', fromUserId, error);
+        });
+        
+        console.log('Added remote audio for user:', fromUserId, 'audio element:', audioElement);
     };
     
     // Set remote description and create answer
     try {
+        console.log('Handling offer from user:', fromUserId);
         await pc.setRemoteDescription(offer);
+        console.log('Remote description set for user:', fromUserId);
+        
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        console.log('Answer created and set for user:', fromUserId);
+        
         voiceChat.ws.send(JSON.stringify({
             type: 'answer',
             fromUserId: fromUserId,
             answer: answer
         }));
+        console.log('Answer sent to user:', fromUserId);
     } catch (error) {
-        console.error('Error handling offer:', error);
+        console.error('Error handling offer from user:', fromUserId, error);
     }
 }
 
 async function handleAnswer(fromUserId, answer) {
+    console.log('Handling answer from user:', fromUserId);
     const pc = voiceChat.peerConnections.get(fromUserId);
     if (pc) {
         try {
             await pc.setRemoteDescription(answer);
+            console.log('Remote description set from answer for user:', fromUserId);
         } catch (error) {
-            console.error('Error handling answer:', error);
+            console.error('Error handling answer from user:', fromUserId, error);
         }
+    } else {
+        console.error('No peer connection found for user:', fromUserId);
     }
 }
 
 async function handleIceCandidate(fromUserId, candidate) {
+    console.log('Handling ICE candidate from user:', fromUserId);
     const pc = voiceChat.peerConnections.get(fromUserId);
     if (pc) {
         try {
             await pc.addIceCandidate(candidate);
+            console.log('ICE candidate added for user:', fromUserId);
         } catch (error) {
-            console.error('Error adding ICE candidate:', error);
+            console.error('Error adding ICE candidate for user:', fromUserId, error);
         }
+    } else {
+        console.error('No peer connection found for ICE candidate from user:', fromUserId);
     }
 }
 
