@@ -1,25 +1,32 @@
 {
   "manifest_version": 3,
   "name": "MoonMic",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "A lightweight browser extension that allow's voice chat rooms depending on the token you're currently viewing on Axiom or BullX.",
   "permissions": [
     "activeTab",
-    "tabs",
-    "scripting"
+    "storage"
+  ],
+  "host_permissions": [
+    "https://axiom.trade/*",
+    "https://neo.bullx.io/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://axiom.trade/*",
+        "https://neo.bullx.io/*"
+      ],
       "js": ["content.js"],
       "css": ["overlay.css"]
     }
   ],
   "action": {
-    "default_title": "MoonMic"
+    "default_popup": "popup.html",
+    "default_title": "MoonMic - Voice Chat for Memecoins"
   },
   "icons": {
     "16": "icons/icon16.png",
@@ -31,5 +38,11 @@
       "resources": ["icons/moonmic.png"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://axiom.trade https://neo.bullx.io wss: https:; media-src 'self' blob:;"
+  },
+  "minimum_chrome_version": "88",
+  "author": "MoonMic",
+  "homepage_url": "https://github.com/MoonMic/MoonMic"
 } 
