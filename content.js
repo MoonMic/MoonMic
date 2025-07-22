@@ -836,9 +836,9 @@ function updateParticipantsList() {
         html += `
             <div class="moonmic-user-item" data-user-id="${userId}">
                 <div class="moonmic-user-info">
-                    <span>${participant.username}</span>
+                    <span class="moonmic-username-clickable" data-user-id="${userId}">${participant.username}</span>
                 </div>
-                <div class="moonmic-user-controls">
+                <div class="moonmic-user-controls" style="display: none;">
                     <button class="moonmic-user-mute-btn" data-user-id="${userId}" title="Mute/Unmute user">
                         <span class="moonmic-speaker-icon">${isUserMuted ? '🔇' : '🔊'}</span>
                     </button>
@@ -866,6 +866,15 @@ function updateParticipantsList() {
 }
 
 function setupUserControls() {
+    // Setup clickable usernames to show volume controls
+    const clickableUsernames = document.querySelectorAll('.moonmic-username-clickable');
+    clickableUsernames.forEach(username => {
+        username.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            showVolumeControls(userId);
+        });
+    });
+    
     // Setup volume sliders
     const volumeSliders = document.querySelectorAll('.moonmic-volume-slider');
     volumeSliders.forEach(slider => {
@@ -873,6 +882,18 @@ function setupUserControls() {
             const userId = this.getAttribute('data-user-id');
             const volume = this.value / 100; // Convert 0-100 to 0.0-1.0
             setUserVolume(userId, volume);
+        });
+        
+        // Hide controls when mouse is released
+        slider.addEventListener('mouseup', function() {
+            const userId = this.getAttribute('data-user-id');
+            setTimeout(() => hideVolumeControls(userId), 500); // Hide after 500ms delay
+        });
+        
+        // Hide controls when slider loses focus
+        slider.addEventListener('blur', function() {
+            const userId = this.getAttribute('data-user-id');
+            setTimeout(() => hideVolumeControls(userId), 200);
         });
     });
     
@@ -884,6 +905,33 @@ function setupUserControls() {
             toggleUserMute(userId);
         });
     });
+}
+
+function showVolumeControls(userId) {
+    // Hide all other volume controls first
+    const allControls = document.querySelectorAll('.moonmic-user-controls');
+    allControls.forEach(control => {
+        control.style.display = 'none';
+    });
+    
+    // Show controls for this specific user
+    const userItem = document.querySelector(`.moonmic-user-item[data-user-id="${userId}"]`);
+    if (userItem) {
+        const controls = userItem.querySelector('.moonmic-user-controls');
+        if (controls) {
+            controls.style.display = 'flex';
+        }
+    }
+}
+
+function hideVolumeControls(userId) {
+    const userItem = document.querySelector(`.moonmic-user-item[data-user-id="${userId}"]`);
+    if (userItem) {
+        const controls = userItem.querySelector('.moonmic-user-controls');
+        if (controls) {
+            controls.style.display = 'none';
+        }
+    }
 }
 
 function setUserVolume(userId, volume) {

@@ -446,6 +446,7 @@
     color: white;
     font-size: 14px;
     gap: 8px;
+    position: relative;
 }
 
 .moonmic-user-item.you {
@@ -457,6 +458,23 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.moonmic-username-clickable {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.moonmic-username-clickable:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.02);
+}
+
+.moonmic-username-clickable:active {
+    transform: scale(0.98);
 }
 
 .moonmic-user-status {
@@ -487,6 +505,13 @@
     gap: 8px;
     flex: 1;
     max-width: 120px;
+    position: absolute;
+    right: 40px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 10;
 }
 
 .moonmic-user-mute-btn {
