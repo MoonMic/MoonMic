@@ -14,7 +14,9 @@ let voiceChat = {
     username: null,
     roomId: null,
     isMuted: false,
-    participants: new Map()
+    participants: new Map(),
+    userVolumes: new Map(), // Store individual user volumes (0.0 to 1.0)
+    userMutes: new Map()    // Store individual user mute states
 };
 
 // Test mode - set to true to test without server
@@ -22,7 +24,7 @@ const TEST_MODE = false;
 
 // Server URLs - update these with your deployed server
 const LOCAL_SERVER_URL = 'ws://localhost:3000';
-const PRODUCTION_SERVER_URL = 'wss://your-moonmic-server.com'; // Update this after deployment
+const PRODUCTION_SERVER_URL = 'wss://moonmic-production.up.railway.app'; // Railway deployment
 
 // Choose which server to use (change this for testing vs production)
 const SERVER_URL = PRODUCTION_SERVER_URL; // Change to LOCAL_SERVER_URL for local testing
@@ -564,6 +566,12 @@ async function createPeerConnection(remoteUserId) {
         audioElement.controls = false;
         audioElement.style.display = 'none';
         
+        // Set initial volume from user preferences
+        const userVolume = voiceChat.userVolumes.get(remoteUserId) || 1.0;
+        const isUserMuted = voiceChat.userMutes.get(remoteUserId) || false;
+        audioElement.volume = userVolume;
+        audioElement.muted = isUserMuted;
+        
         // Set the remote stream as the audio source
         audioElement.srcObject = remoteStream;
         
@@ -616,6 +624,12 @@ async function handleOffer(fromUserId, offer) {
         audioElement.autoplay = true;
         audioElement.controls = false;
         audioElement.style.display = 'none';
+        
+        // Set initial volume from user preferences
+        const userVolume = voiceChat.userVolumes.get(fromUserId) || 1.0;
+        const isUserMuted = voiceChat.userMutes.get(fromUserId) || false;
+        audioElement.volume = userVolume;
+        audioElement.muted = isUserMuted;
         
         // Set the remote stream as the audio source
         audioElement.srcObject = remoteStream;
@@ -815,10 +829,28 @@ function updateParticipantsList() {
     
     // Add other participants
     voiceChat.participants.forEach(participant => {
+        const userId = participant.id;
+        const isUserMuted = voiceChat.userMutes.get(userId) || false;
+        const userVolume = voiceChat.userVolumes.get(userId) || 1.0;
+        
         html += `
-            <div class="moonmic-user-item">
+            <div class="moonmic-user-item" data-user-id="${userId}">
                 <div class="moonmic-user-info">
                     <span>${participant.username}</span>
+                </div>
+                <div class="moonmic-user-controls">
+                    <button class="moonmic-user-mute-btn" data-user-id="${userId}" title="Mute/Unmute user">
+                        <span class="moonmic-speaker-icon">${isUserMuted ? '🔇' : '🔊'}</span>
+                    </button>
+                    <div class="moonmic-volume-control">
+                        <input type="range" 
+                               class="moonmic-volume-slider" 
+                               data-user-id="${userId}"
+                               min="0" 
+                               max="100" 
+                               value="${Math.round(userVolume * 100)}"
+                               title="Adjust volume">
+                    </div>
                 </div>
                 <div class="moonmic-user-status">
                     <span class="moonmic-mic-icon">${participant.isMuted ? '🔇' : '🎤'}</span>
@@ -828,6 +860,68 @@ function updateParticipantsList() {
     });
     
     userList.innerHTML = html;
+    
+    // Setup volume and mute controls
+    setupUserControls();
+}
+
+function setupUserControls() {
+    // Setup volume sliders
+    const volumeSliders = document.querySelectorAll('.moonmic-volume-slider');
+    volumeSliders.forEach(slider => {
+        slider.addEventListener('input', function() {
+            const userId = this.getAttribute('data-user-id');
+            const volume = this.value / 100; // Convert 0-100 to 0.0-1.0
+            setUserVolume(userId, volume);
+        });
+    });
+    
+    // Setup mute buttons
+    const muteButtons = document.querySelectorAll('.moonmic-user-mute-btn');
+    muteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            toggleUserMute(userId);
+        });
+    });
+}
+
+function setUserVolume(userId, volume) {
+    voiceChat.userVolumes.set(userId, volume);
+    
+    // Find the audio element for this user and adjust volume
+    const audioElement = document.getElementById(`audio-${userId}`);
+    if (audioElement) {
+        audioElement.volume = volume;
+    }
+    
+    // Update the volume slider value
+    const volumeSlider = document.querySelector(`.moonmic-volume-slider[data-user-id="${userId}"]`);
+    if (volumeSlider) {
+        volumeSlider.value = Math.round(volume * 100);
+    }
+}
+
+function toggleUserMute(userId) {
+    const isCurrentlyMuted = voiceChat.userMutes.get(userId) || false;
+    const newMuteState = !isCurrentlyMuted;
+    
+    voiceChat.userMutes.set(userId, newMuteState);
+    
+    // Find the audio element for this user and mute/unmute
+    const audioElement = document.getElementById(`audio-${userId}`);
+    if (audioElement) {
+        audioElement.muted = newMuteState;
+    }
+    
+    // Update the mute button icon
+    const muteButton = document.querySelector(`.moonmic-user-mute-btn[data-user-id="${userId}"]`);
+    if (muteButton) {
+        const speakerIcon = muteButton.querySelector('.moonmic-speaker-icon');
+        if (speakerIcon) {
+            speakerIcon.textContent = newMuteState ? '🔇' : '🔊';
+        }
+    }
 }
 
 function updateUserMuteStatus(userId, isMuted) {
