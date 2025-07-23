@@ -210,6 +210,19 @@ wss.on('connection', (ws) => {
                     }
                     break;
                     
+                case 'echo':
+                    log('Received echo request', { clientId: currentUser?.id, message: data.message });
+                    try {
+                        ws.send(JSON.stringify({
+                            type: 'echo-response',
+                            message: data.message,
+                            timestamp: Date.now()
+                        }));
+                    } catch (error) {
+                        log('Failed to send echo response', { error: error.message });
+                    }
+                    break;
+                    
                 case 'leave-room':
                     if (currentRoom && rooms.has(currentRoom)) {
                         const room = rooms.get(currentRoom);

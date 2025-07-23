@@ -581,6 +581,10 @@ function handleSignalingMessage(event) {
         case 'pong':
             console.log('✅ Received pong from server:', data);
             break;
+            
+        case 'echo-response':
+            console.log('✅ Received echo response from server:', data);
+            break;
     }
 }
 
@@ -1003,6 +1007,19 @@ function setupVoiceChatListeners() {
                     console.log('🔍 DEBUG: Sent join-room message:', joinMessage);
                 } catch (error) {
                     wsTest += `\n❌ Join-room failed: ${error.message}`;
+                }
+                
+                // Test echo functionality
+                try {
+                    const echoMessage = {
+                        type: 'echo',
+                        message: 'Hello from client!'
+                    };
+                    voiceChat.ws.send(JSON.stringify(echoMessage));
+                    wsTest += '\n✅ Echo message sent';
+                    console.log('🔍 DEBUG: Sent echo message:', echoMessage);
+                } catch (error) {
+                    wsTest += `\n❌ Echo failed: ${error.message}`;
                 }
             }
             
