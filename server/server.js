@@ -116,11 +116,14 @@ wss.on('connection', (ws, req) => {
                     }));
                     
                     try {
-                        ws.send(JSON.stringify({
+                        const roomJoinedMessage = {
                             type: 'room-joined',
                             participants,
                             userId: clientId
-                        }));
+                        };
+                        log(`Sending room-joined message`, { clientId, participantsCount: participants.length, message: roomJoinedMessage });
+                        ws.send(JSON.stringify(roomJoinedMessage));
+                        log(`Successfully sent room-joined message`, { clientId });
                     } catch (sendError) {
                         log(`Failed to send room-joined message`, { error: sendError.message, clientId });
                     }

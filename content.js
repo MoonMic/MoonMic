@@ -489,14 +489,20 @@ async function connectToSignalingServer() {
             // Wait for room-joined confirmation before resolving
             let roomJoined = false;
             voiceChat.ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'room-joined' && !roomJoined) {
-                    console.log('Successfully joined room:', voiceChat.roomId);
-                    roomJoined = true;
-                    resolve();
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('🔍 DEBUG: Original handler received:', data.type, data);
+                    
+                    if (data.type === 'room-joined' && !roomJoined) {
+                        console.log('🎉 Successfully joined room:', voiceChat.roomId);
+                        roomJoined = true;
+                        resolve();
+                    }
+                    // Always call the handler for all messages
+                    handleSignalingMessage(event);
+                } catch (error) {
+                    console.error('❌ Failed to parse message in original handler:', error);
                 }
-                // Always call the handler for all messages
-                handleSignalingMessage(event);
             };
         };
         
@@ -1078,8 +1084,8 @@ function setupVoiceChatListeners() {
             // Force update participants list
             updateParticipantsList();
             
-            // Add a simple message listener to see what we receive
-            if (voiceChat.ws) {
+            // Add debug logging to existing message handler
+            if (voiceChat.ws && voiceChat.ws.onmessage) {
                 const originalOnMessage = voiceChat.ws.onmessage;
                 voiceChat.ws.onmessage = (event) => {
                     console.log('🔍 DEBUG: Raw message received:', event.data);
@@ -1087,13 +1093,15 @@ function setupVoiceChatListeners() {
                     try {
                         const data = JSON.parse(event.data);
                         console.log('🔍 DEBUG: Message type:', data.type);
+                        console.log('🔍 DEBUG: Full message data:', data);
                     } catch (error) {
                         console.log('🔍 DEBUG: Failed to parse message:', error);
                     }
-                    if (originalOnMessage) {
-                        originalOnMessage(event);
-                    }
+                    // Call the original handler
+                    originalOnMessage(event);
                 };
+            } else {
+                console.log('🔍 DEBUG: No WebSocket or message handler found');
             }
         });
     } else {
