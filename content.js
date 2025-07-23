@@ -476,11 +476,12 @@ async function connectToSignalingServer() {
                 roomId: voiceChat.roomId,
                 username: voiceChat.username
             };
-            console.log('Sending join-room message:', joinMessage);
+            console.log('📤 Sending join-room message:', joinMessage);
             try {
                 voiceChat.ws.send(JSON.stringify(joinMessage));
+                console.log('✅ Join-room message sent successfully');
             } catch (error) {
-                console.error('Failed to send join-room message:', error);
+                console.error('❌ Failed to send join-room message:', error);
                 reject(new Error('Failed to send join message'));
                 return;
             }
@@ -515,9 +516,9 @@ async function connectToSignalingServer() {
 function handleSignalingMessage(event) {
     try {
         const data = JSON.parse(event.data);
-        console.log('Received signaling message:', data.type, data);
+        console.log('📨 Received signaling message:', data.type, data);
     } catch (error) {
-        console.error('Failed to parse signaling message:', error, 'Raw message:', event.data);
+        console.error('❌ Failed to parse signaling message:', error, 'Raw message:', event.data);
         return;
     }
     
@@ -528,17 +529,18 @@ function handleSignalingMessage(event) {
     
     switch (data.type) {
         case 'room-joined':
-            console.log('Room joined successfully. Local user ID:', data.userId);
-            console.log('Existing participants:', data.participants);
+            console.log('🎉 Room joined successfully. Local user ID:', data.userId);
+            console.log('📋 Existing participants:', data.participants);
             voiceChat.localUserId = data.userId;
+            console.log('✅ Set local user ID to:', voiceChat.localUserId);
             data.participants.forEach(participant => {
                 if (participant.id !== voiceChat.localUserId) {
-                    console.log('Creating peer connection for existing participant:', participant.id, participant.username);
+                    console.log('🔗 Creating peer connection for existing participant:', participant.id, participant.username);
                     voiceChat.participants.set(participant.id, participant);
                     createPeerConnection(participant.id);
                 }
             });
-            console.log('Final participants after room-joined:', Array.from(voiceChat.participants.values()));
+            console.log('📊 Final participants after room-joined:', Array.from(voiceChat.participants.values()));
             updateParticipantsList();
             break;
             
