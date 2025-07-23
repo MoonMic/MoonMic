@@ -978,6 +978,7 @@ function setupVoiceChatListeners() {
             let wsTest = '❌ No WebSocket connection';
             if (voiceChat.ws) {
                 wsTest = `✅ WebSocket connected (State: ${voiceChat.ws.readyState})`;
+                wsTest += `\nURL: ${voiceChat.ws.url}`;
                 
                 // Send a test message
                 try {
@@ -988,6 +989,18 @@ function setupVoiceChatListeners() {
                     wsTest += '\n✅ Ping sent successfully';
                 } catch (error) {
                     wsTest += `\n❌ Ping failed: ${error.message}`;
+                }
+                
+                // Test if we can send a join-room message
+                try {
+                    voiceChat.ws.send(JSON.stringify({
+                        type: 'join-room',
+                        roomId: voiceChat.roomId,
+                        username: voiceChat.username
+                    }));
+                    wsTest += '\n✅ Join-room message sent';
+                } catch (error) {
+                    wsTest += `\n❌ Join-room failed: ${error.message}`;
                 }
             }
             
