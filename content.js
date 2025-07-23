@@ -547,6 +547,8 @@ function handleSignalingMessage(event) {
                     console.log('🔗 Creating peer connection for existing participant:', participant.id, participant.username);
                     voiceChat.participants.set(participant.id, participant);
                     createPeerConnection(participant.id);
+                } else {
+                    console.log('🔗 Skipping peer connection to self in room-joined:', participant.id);
                 }
             });
             console.log('📊 Final participants after room-joined:', Array.from(voiceChat.participants.values()));
@@ -556,9 +558,15 @@ function handleSignalingMessage(event) {
         case 'user-joined':
             console.log('User joined:', data.userId, data.username);
             console.log('Current participants before adding:', Array.from(voiceChat.participants.values()));
-            voiceChat.participants.set(data.userId, { id: data.userId, username: data.username });
-            console.log('Current participants after adding:', Array.from(voiceChat.participants.values()));
-            createPeerConnection(data.userId);
+            
+            // Don't create peer connection to ourselves
+            if (data.userId === voiceChat.localUserId) {
+                console.log('Skipping peer connection to self:', data.userId);
+            } else {
+                voiceChat.participants.set(data.userId, { id: data.userId, username: data.username });
+                console.log('Current participants after adding:', Array.from(voiceChat.participants.values()));
+                createPeerConnection(data.userId);
+            }
             updateParticipantsList();
             break;
             
@@ -731,6 +739,12 @@ async function createPeerConnection(remoteUserId) {
 }
 
 async function handleOffer(fromUserId, offer) {
+    // Don't process offers from ourselves
+    if (fromUserId === voiceChat.localUserId) {
+        console.log('Skipping offer from self:', fromUserId);
+        return;
+    }
+    
     const pc = new RTCPeerConnection(rtcConfig);
     voiceChat.peerConnections.set(fromUserId, pc);
     
@@ -829,11 +843,23 @@ async function handleOffer(fromUserId, offer) {
 
 async function handleAnswer(fromUserId, answer) {
     console.log('Handling answer from user:', fromUserId);
+    
+    // Don't process answers from ourselves
+    if (fromUserId === voiceChat.localUserId) {
+        console.log('Skipping answer from self:', fromUserId);
+        return;
+    }
+    
     const pc = voiceChat.peerConnections.get(fromUserId);
     if (pc) {
         try {
-            await pc.setRemoteDescription(answer);
-            console.log('Remote description set from answer for user:', fromUserId);
+            // Check if we're in the right state to set remote description
+            if (pc.signalingState === 'have-local-offer') {
+                await pc.setRemoteDescription(answer);
+                console.log('Remote description set from answer for user:', fromUserId);
+            } else {
+                console.warn('Cannot set remote description - wrong signaling state:', pc.signalingState, 'for user:', fromUserId);
+            }
         } catch (error) {
             console.error('Error handling answer from user:', fromUserId, error);
         }
@@ -844,6 +870,13 @@ async function handleAnswer(fromUserId, answer) {
 
 async function handleIceCandidate(fromUserId, candidate) {
     console.log('Handling ICE candidate from user:', fromUserId);
+    
+    // Don't process our own ICE candidates
+    if (fromUserId === voiceChat.localUserId) {
+        console.log('Skipping ICE candidate from self:', fromUserId);
+        return;
+    }
+    
     const pc = voiceChat.peerConnections.get(fromUserId);
     if (pc) {
         try {
