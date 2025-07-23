@@ -10,6 +10,14 @@ const server = http.createServer((req, res) => {
             rooms: rooms.size,
             connections: wss.clients.size
         }));
+    } else if (req.url === '/test') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+            message: 'Server is working!',
+            timestamp: new Date().toISOString(),
+            rooms: Array.from(rooms.keys()),
+            connections: wss.clients.size
+        }));
     } else {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Not found' }));
@@ -50,6 +58,7 @@ wss.on('connection', (ws) => {
             switch (data.type) {
                 case 'join-room':
                     const { roomId, username } = data;
+                    log('Received join-room request', { clientId, roomId, username });
                     currentUser = { id: clientId, username, ws };
                     currentRoom = roomId;
                     
