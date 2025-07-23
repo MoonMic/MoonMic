@@ -903,21 +903,13 @@ function showVoiceChatUI() {
     
     mainContent.innerHTML = `
         <div class="moonmic-voice-chat">
-            <div class="moonmic-voice-header">
-                <div class="moonmic-voice-title">
-                    
-                </div>
-                            <div class="moonmic-voice-controls">
+            <div class="moonmic-voice-controls">
                 <button class="moonmic-mute-btn" id="moonmic-mute-btn">
                     🎤 Mute
-                </button>
-                <button class="moonmic-test-btn" id="moonmic-test-btn" title="Test audio connection">
-                    🔍 Test
                 </button>
                 <button class="moonmic-leave-btn" id="moonmic-leave-btn">
                     Leave
                 </button>
-            </div>
             </div>
             <div class="moonmic-users-section">
                 <div class="moonmic-users-header">
@@ -937,15 +929,10 @@ function showVoiceChatUI() {
 
 function setupVoiceChatListeners() {
     const muteBtn = document.getElementById('moonmic-mute-btn');
-    const testBtn = document.getElementById('moonmic-test-btn');
     const leaveBtn = document.getElementById('moonmic-leave-btn');
     
     if (muteBtn) {
         muteBtn.addEventListener('click', toggleMute);
-    }
-    
-    if (testBtn) {
-        testBtn.addEventListener('click', testAudioConnection);
     }
     
     if (leaveBtn) {
@@ -962,7 +949,7 @@ function updateParticipantsList() {
     // Add current user first
     html += `
         <div class="moonmic-user-item you">
-            <div class="moonmic-user-info moonmic-username-clickable">
+            <div class="moonmic-user-info">
                 <span>${voiceChat.username} (You)</span>
             </div>
             <div class="moonmic-user-status">
@@ -973,28 +960,10 @@ function updateParticipantsList() {
     
     // Add other participants
     voiceChat.participants.forEach(participant => {
-        const userId = participant.id;
-        const isUserMuted = voiceChat.userMutes.get(userId) || false;
-        const userVolume = voiceChat.userVolumes.get(userId) || 1.0;
-        
         html += `
-            <div class="moonmic-user-item" data-user-id="${userId}">
-                <div class="moonmic-user-info moonmic-username-clickable" data-user-id="${userId}">
+            <div class="moonmic-user-item" data-user-id="${participant.id}">
+                <div class="moonmic-user-info">
                     <span>${participant.username}</span>
-                </div>
-                <div class="moonmic-user-controls" style="display: none;">
-                    <button class="moonmic-user-mute-btn" data-user-id="${userId}" title="Mute/Unmute user">
-                        <span class="moonmic-speaker-icon">${isUserMuted ? '🔇' : '🔊'}</span>
-                    </button>
-                    <div class="moonmic-volume-control">
-                        <input type="range" 
-                               class="moonmic-volume-slider" 
-                               data-user-id="${userId}"
-                               min="0" 
-                               max="100" 
-                               value="${Math.round(userVolume * 100)}"
-                               title="Adjust volume">
-                    </div>
                 </div>
                 <div class="moonmic-user-status">
                     <span class="moonmic-mic-icon">${participant.isMuted ? '🔇' : '🎤'}</span>
@@ -1004,9 +973,6 @@ function updateParticipantsList() {
     });
     
     userList.innerHTML = html;
-    
-    // Setup volume and mute controls
-    setupUserControls();
 }
 
 function setupUserControls() {
