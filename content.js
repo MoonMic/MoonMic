@@ -551,6 +551,8 @@ function handleSignalingMessage(event) {
             // Clear existing participants and add new ones
             voiceChat.participants.clear();
             
+            // Only create peer connections for users who joined BEFORE us
+            // This prevents signaling state conflicts
             data.participants.forEach(participant => {
                 console.log('🔍 Processing participant:', participant.id, participant.username);
                 if (participant.id !== voiceChat.localUserId) {
@@ -562,8 +564,11 @@ function handleSignalingMessage(event) {
                     console.log('🔗 Skipping peer connection to self in room-joined:', participant.id);
                 }
             });
-            console.log('📊 Final participants after room-joined:', Array.from(voiceChat.participants.values()));
-            console.log('👥 Total participants count:', voiceChat.participants.size + 1); // +1 for self
+            
+            // Force update the participants array to ensure it's properly stored
+            const finalParticipants = Array.from(voiceChat.participants.values());
+            console.log('📊 Final participants after room-joined:', finalParticipants);
+            console.log('👥 Total participants count:', finalParticipants.length + 1); // +1 for self
             
             // Small delay to ensure UI is ready
             setTimeout(() => {
@@ -765,79 +770,88 @@ async function handleOffer(fromUserId, offer) {
         return;
     }
     
-    const pc = new RTCPeerConnection(rtcConfig);
-    voiceChat.peerConnections.set(fromUserId, pc);
+    console.log('Handling offer from user:', fromUserId);
     
-    // Add local stream
-    voiceChat.localStream.getTracks().forEach(track => {
-        pc.addTrack(track, voiceChat.localStream);
-    });
-    
-    // Handle ICE candidates
-    pc.onicecandidate = (event) => {
-        if (event.candidate) {
-            try {
-                voiceChat.ws.send(JSON.stringify({
-                    type: 'ice-candidate',
-                    targetUserId: fromUserId,
-                    candidate: event.candidate
-                }));
-            } catch (error) {
-                console.error('Failed to send ICE candidate in handleOffer for user:', fromUserId, error);
+    // Get existing peer connection or create new one
+    let pc = voiceChat.peerConnections.get(fromUserId);
+    if (!pc) {
+        console.log('Creating new peer connection for offer from user:', fromUserId);
+        pc = new RTCPeerConnection(rtcConfig);
+        voiceChat.peerConnections.set(fromUserId, pc);
+        
+        // Add local stream
+        voiceChat.localStream.getTracks().forEach(track => {
+            pc.addTrack(track, voiceChat.localStream);
+        });
+        
+        // Handle ICE candidates
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                try {
+                    voiceChat.ws.send(JSON.stringify({
+                        type: 'ice-candidate',
+                        targetUserId: fromUserId,
+                        candidate: event.candidate
+                    }));
+                } catch (error) {
+                    console.error('Failed to send ICE candidate in handleOffer for user:', fromUserId, error);
+                }
             }
-        }
-    };
-    
-    // Handle remote stream
-    pc.ontrack = (event) => {
-        const remoteStream = event.streams[0];
-        console.log('Received remote stream for user:', fromUserId, 'tracks:', remoteStream.getTracks().length);
+        };
         
-        // Create audio element for remote audio
-        const audioElement = document.createElement('audio');
-        audioElement.id = `audio-${fromUserId}`;
-        audioElement.autoplay = true;
-        audioElement.controls = false;
-        audioElement.style.display = 'none';
-        audioElement.playsInline = true;
-        
-        // Set initial volume from user preferences
-        const userVolume = voiceChat.userVolumes.get(fromUserId) || 1.0;
-        const isUserMuted = voiceChat.userMutes.get(fromUserId) || false;
-        audioElement.volume = userVolume;
-        audioElement.muted = isUserMuted;
-        
-        // Set the remote stream as the audio source
-        audioElement.srcObject = remoteStream;
-        
-        // Add to page (hidden)
-        document.body.appendChild(audioElement);
-        
-        // Set up voice activity detection
-        setupVoiceActivityDetection(fromUserId, remoteStream);
-        
-        // Ensure audio plays
-        audioElement.play().then(() => {
-            console.log('Audio started playing for user:', fromUserId);
-        }).catch(error => {
-            console.error('Failed to play audio for user:', fromUserId, error);
-        });
-        
-        // Add event listeners for debugging
-        audioElement.addEventListener('play', () => {
-            console.log('Audio play event fired for user:', fromUserId);
-        });
-        
-        audioElement.addEventListener('error', (e) => {
-            console.error('Audio error for user:', fromUserId, e);
-        });
-        
-        audioElement.addEventListener('loadedmetadata', () => {
-            console.log('Audio metadata loaded for user:', fromUserId, 'duration:', audioElement.duration);
-        });
-        
-        console.log('Added remote audio for user:', fromUserId, 'audio element:', audioElement);
-    };
+        // Handle remote stream
+        pc.ontrack = (event) => {
+            const remoteStream = event.streams[0];
+            console.log('Received remote stream for user:', fromUserId, 'tracks:', remoteStream.getTracks().length);
+            
+            // Create audio element for remote audio
+            const audioElement = document.createElement('audio');
+            audioElement.id = `audio-${fromUserId}`;
+            audioElement.autoplay = true;
+            audioElement.controls = false;
+            audioElement.style.display = 'none';
+            audioElement.playsInline = true;
+            
+            // Set initial volume from user preferences
+            const userVolume = voiceChat.userVolumes.get(fromUserId) || 1.0;
+            const isUserMuted = voiceChat.userMutes.get(fromUserId) || false;
+            audioElement.volume = userVolume;
+            audioElement.muted = isUserMuted;
+            
+            // Set the remote stream as the audio source
+            audioElement.srcObject = remoteStream;
+            
+            // Add to page (hidden)
+            document.body.appendChild(audioElement);
+            
+            // Set up voice activity detection
+            setupVoiceActivityDetection(fromUserId, remoteStream);
+            
+            // Ensure audio plays
+            audioElement.play().then(() => {
+                console.log('Audio started playing for user:', fromUserId);
+            }).catch(error => {
+                console.error('Failed to play audio for user:', fromUserId, error);
+            });
+            
+            // Add event listeners for debugging
+            audioElement.addEventListener('play', () => {
+                console.log('Audio play event fired for user:', fromUserId);
+            });
+            
+            audioElement.addEventListener('error', (e) => {
+                console.error('Audio error for user:', fromUserId, e);
+            });
+            
+            audioElement.addEventListener('loadedmetadata', () => {
+                console.log('Audio metadata loaded for user:', fromUserId, 'duration:', audioElement.duration);
+            });
+            
+            console.log('Added remote audio for user:', fromUserId, 'audio element:', audioElement);
+        };
+    } else {
+        console.log('Using existing peer connection for offer from user:', fromUserId);
+    }
     
     // Set remote description and create answer
     try {
@@ -876,15 +890,19 @@ async function handleAnswer(fromUserId, answer) {
     const pc = voiceChat.peerConnections.get(fromUserId);
     if (pc) {
         try {
+            console.log('Current signaling state for answer from user:', fromUserId, 'State:', pc.signalingState);
+            
             // Check if we're in the right state to set remote description
             if (pc.signalingState === 'have-local-offer') {
                 await pc.setRemoteDescription(answer);
                 console.log('Remote description set from answer for user:', fromUserId);
             } else {
-                console.warn('Cannot set remote description - wrong signaling state:', pc.signalingState, 'for user:', fromUserId);
+                console.warn('⚠️ Cannot set remote description - wrong signaling state:', pc.signalingState, 'for user:', fromUserId);
+                console.warn('⚠️ This usually means both users tried to create offers simultaneously');
             }
         } catch (error) {
             console.error('Error handling answer from user:', fromUserId, error);
+            console.error('Error details:', error.message);
         }
     } else {
         console.error('No peer connection found for user:', fromUserId);
