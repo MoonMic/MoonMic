@@ -537,12 +537,15 @@ function handleSignalingMessage(event) {
                     createPeerConnection(participant.id);
                 }
             });
+            console.log('Final participants after room-joined:', Array.from(voiceChat.participants.values()));
             updateParticipantsList();
             break;
             
         case 'user-joined':
             console.log('User joined:', data.userId, data.username);
+            console.log('Current participants before adding:', Array.from(voiceChat.participants.values()));
             voiceChat.participants.set(data.userId, { id: data.userId, username: data.username });
+            console.log('Current participants after adding:', Array.from(voiceChat.participants.values()));
             createPeerConnection(data.userId);
             updateParticipantsList();
             break;
@@ -694,6 +697,7 @@ async function handleOffer(fromUserId, offer) {
             try {
                 voiceChat.ws.send(JSON.stringify({
                     type: 'ice-candidate',
+                    targetUserId: fromUserId,
                     candidate: event.candidate
                 }));
             } catch (error) {
@@ -921,6 +925,11 @@ function showVoiceChatUI() {
                     <!-- Users will be populated here -->
                 </div>
             </div>
+            <div style="padding: 8px; text-align: center;">
+                <button id="debug-btn" style="background: #333; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                    🔍 Debug
+                </button>
+            </div>
         </div>
     `;
     
@@ -932,6 +941,7 @@ function showVoiceChatUI() {
 function setupVoiceChatListeners() {
     const muteBtn = document.getElementById('moonmic-mute-btn');
     const leaveBtn = document.getElementById('moonmic-leave-btn');
+    const debugBtn = document.getElementById('debug-btn');
     
     if (muteBtn) {
         muteBtn.addEventListener('click', toggleMute);
@@ -940,11 +950,36 @@ function setupVoiceChatListeners() {
     if (leaveBtn) {
         leaveBtn.addEventListener('click', leaveVoiceChat);
     }
+    
+    if (debugBtn) {
+        debugBtn.addEventListener('click', () => {
+            console.log('=== DEBUG INFO ===');
+            console.log('Voice Chat State:', {
+                username: voiceChat.username,
+                roomId: voiceChat.roomId,
+                localUserId: voiceChat.localUserId,
+                isMuted: voiceChat.isMuted,
+                wsConnected: !!voiceChat.ws,
+                participantsCount: voiceChat.participants.size,
+                peerConnectionsCount: voiceChat.peerConnections.size
+            });
+            console.log('Participants:', Array.from(voiceChat.participants.values()));
+            console.log('Peer Connections:', Array.from(voiceChat.peerConnections.keys()));
+            console.log('Local Stream:', voiceChat.localStream);
+            console.log('==================');
+        });
+    }
 }
 
 function updateParticipantsList() {
     const userList = document.getElementById('moonmic-user-list');
-    if (!userList) return;
+    if (!userList) {
+        console.error('User list element not found');
+        return;
+    }
+    
+    console.log('Updating participants list. Current participants:', Array.from(voiceChat.participants.values()));
+    console.log('Local user:', voiceChat.username, 'Local user ID:', voiceChat.localUserId);
     
     let html = '';
     
@@ -962,6 +997,7 @@ function updateParticipantsList() {
     
     // Add other participants
     voiceChat.participants.forEach(participant => {
+        console.log('Adding participant to UI:', participant);
         const userId = participant.id;
         const isUserMuted = voiceChat.userMutes.get(userId) || false;
         const userVolume = voiceChat.userVolumes.get(userId) || 1.0;
@@ -993,6 +1029,7 @@ function updateParticipantsList() {
     });
     
     userList.innerHTML = html;
+    console.log('Updated user list HTML:', userList.innerHTML);
     
     // Setup volume and mute controls
     setupUserControls();
