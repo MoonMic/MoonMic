@@ -381,9 +381,9 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-width: 180px;
+    min-width: 200px;
     flex: 3;
-    max-width: 240px;
+    max-width: 280px;
 }
 
 .moonmic-mute-btn:hover {
@@ -409,9 +409,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 80px;
+    min-width: 100px;
     flex: 1;
-    max-width: 100px;
+    max-width: 120px;
 }
 
 .moonmic-leave-btn:hover {
