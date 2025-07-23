@@ -361,10 +361,10 @@
 
 .moonmic-voice-controls {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     justify-content: center;
     align-items: center;
-    padding: 16px;
+    padding: 20px;
 }
 
 .moonmic-mute-btn {
@@ -381,9 +381,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-width: 200px;
-    flex: 3;
-    max-width: 280px;
+    width: 270px;
+    flex: none;
 }
 
 .moonmic-mute-btn:hover {
