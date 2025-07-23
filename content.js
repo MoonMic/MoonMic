@@ -467,7 +467,7 @@ async function connectToSignalingServer() {
         }, 10000); // 10 second timeout
         
         voiceChat.ws.onopen = () => {
-            console.log('Connected to signaling server at:', wsUrl);
+            console.log('✅ Connected to signaling server at:', wsUrl);
             clearTimeout(connectionTimeout);
             
             // Join the room
@@ -501,7 +501,7 @@ async function connectToSignalingServer() {
         
         voiceChat.ws.onerror = (error) => {
             clearTimeout(connectionTimeout);
-            console.error('WebSocket connection error:', error);
+            console.error('❌ WebSocket connection error:', error);
             reject(new Error('Failed to connect to voice chat server'));
         };
         
@@ -957,7 +957,9 @@ function setupVoiceChatListeners() {
     }
     
     if (debugBtn) {
+        console.log('Debug button found, adding event listener');
         debugBtn.addEventListener('click', () => {
+            alert('Debug button clicked! Check console for details.');
             console.log('=== DEBUG INFO ===');
             console.log('Voice Chat State:', {
                 username: voiceChat.username,
@@ -997,6 +999,8 @@ function setupVoiceChatListeners() {
             
             console.log('==================');
         });
+    } else {
+        console.error('Debug button not found!');
     }
 }
 
