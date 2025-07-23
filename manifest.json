@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "MoonMic",
-  "version": "0.9.6.1",
+  "version": "1.0.0",
   "description": "A lightweight browser extension that allow's voice chat rooms depending on the token you're currently viewing on Axiom or BullX.",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
     "https://axiom.trade/*",
@@ -17,16 +18,12 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://axiom.trade/*",
-        "https://neo.bullx.io/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["content.js"],
       "css": ["overlay.css"]
     }
   ],
   "action": {
-    "default_popup": "popup.html",
     "default_title": "MoonMic - Voice Chat for Memecoins"
   },
   "icons": {

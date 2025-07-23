@@ -29,7 +29,7 @@ const PRODUCTION_SERVER_URL = 'wss://moonmic-production.up.railway.app'; // Rail
 // Choose which server to use (change this for testing vs production)
 const SERVER_URL = PRODUCTION_SERVER_URL; // Change to LOCAL_SERVER_URL for local testing
 
-// WebRTC Configuration
+// WebRTC Configuration with improved audio quality
 const rtcConfig = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -38,7 +38,17 @@ const rtcConfig = {
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' }
     ],
-    iceCandidatePoolSize: 10
+    iceCandidatePoolSize: 10,
+    // Audio quality improvements
+    sdpSemantics: 'unified-plan',
+    // Prefer Opus codec for better quality
+    codecs: {
+        audio: [
+            { mimeType: 'audio/opus', clockRate: 48000, channels: 2, sdpFmtpLine: 'minptime=10;useinbandfec=1' },
+            { mimeType: 'audio/PCMU', clockRate: 8000, channels: 1 },
+            { mimeType: 'audio/PCMA', clockRate: 8000, channels: 1 }
+        ]
+    }
 };
 
 // Create the overlay HTML
@@ -63,9 +73,7 @@ function createOverlay() {
 
             <!-- Main Content Area -->
             <div class="moonmic-main-content">
-                <button class="moonmic-start-btn" id="moonmic-start-btn">
-                    Join Voice Chat
-                </button>
+                <!-- Content will be set by showAppropriateUI() -->
             </div>
         </div>
     `;
@@ -83,23 +91,9 @@ function resetToInitialUI() {
         moonMicOverlay.classList.remove('showing-username');
         moonMicOverlay.classList.remove('showing-voice-chat');
         
-        // Reset to initial "Join Voice Chat" button
-        mainContent.innerHTML = `
-            <button class="moonmic-start-btn" id="moonmic-start-btn">
-                Join Voice Chat
-            </button>
-        `;
-        
-        // Re-setup the start button listener
-        const startBtn = document.getElementById('moonmic-start-btn');
-        if (startBtn) {
-            startBtn.addEventListener('click', function() {
-                console.log('Start button clicked');
-                // Re-detect page type in case it changed
-                detectPageType();
-                showAppropriateUI();
-            });
-        }
+        // Show appropriate UI based on current page
+        detectPageType();
+        showAppropriateUI();
     }
 }
 
@@ -114,9 +108,14 @@ function showOverlay() {
         // Add event listeners
         setupEventListeners();
         setupDragging();
+        
+        // Show appropriate UI for the current page
+        detectPageType();
+        showAppropriateUI();
     } else {
-        // Reset to initial UI when reopening
-        resetToInitialUI();
+        // Re-detect page type and show appropriate UI when reopening
+        detectPageType();
+        showAppropriateUI();
     }
     
     moonMicOverlay.style.display = 'block';
@@ -139,17 +138,8 @@ function hideOverlay() {
 function setupEventListeners() {
     const closeBtn = document.getElementById('moonmic-close-btn');
     const moonIcon = document.querySelector('.moonmic-icon');
-    const startBtn = document.getElementById('moonmic-start-btn');
     
     let isMicActive = false;
-    
-    // Handle initial start button click
-    startBtn.addEventListener('click', function() {
-        console.log('Start button clicked');
-        // Re-detect page type in case it changed
-        detectPageType();
-        showAppropriateUI();
-    });
     
 
     
@@ -245,12 +235,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 function showAppropriateUI() {
     const mainContent = moonMicOverlay.querySelector('.moonmic-main-content');
     
-    console.log('showAppropriateUI called');
-    console.log('currentPageType:', currentPageType);
-    console.log('Current URL:', window.location.href);
-    
     if (currentPageType === 'axiom' || currentPageType === 'bullx') {
-        console.log('Showing username input UI');
         // Remove the showing-not-found class and add showing-username class
         moonMicOverlay.classList.remove('showing-not-found');
         moonMicOverlay.classList.add('showing-username');
@@ -267,7 +252,6 @@ function showAppropriateUI() {
         // Re-setup event listeners for the new elements
         setupJoinButtonListener();
     } else {
-        console.log('Showing coin not found UI');
         // Add the showing-not-found class to increase height
         moonMicOverlay.classList.add('showing-not-found');
         
@@ -373,10 +357,6 @@ function detectPageType() {
     const url = window.location.href;
     const hostname = window.location.hostname;
     
-    console.log('detectPageType called');
-    console.log('URL:', url);
-    console.log('Hostname:', hostname);
-    
     if (hostname.includes('axiom.trade')) {
         console.log('On Axiom domain');
         // Check if we're on a token/memecoin page
@@ -402,7 +382,51 @@ function detectPageType() {
         console.log('Not on Axiom or BullX');
     }
     
-    console.log('Final currentPageType:', currentPageType);
+
+}
+
+// SDP Enhancement for clearer, crisper audio
+function enhanceSDPForAudioQuality(sdp) {
+    // Replace SDP to improve audio clarity
+    let enhancedSdp = sdp;
+    
+    // Set Opus codec parameters for maximum clarity
+    enhancedSdp = enhancedSdp.replace(
+        /a=fmtp:111 minptime=10;useinbandfec=1/g,
+        'a=fmtp:111 minptime=5;useinbandfec=1;stereo=1;maxaveragebitrate=256000;maxplaybackrate=48000;maxbandwidth=20000;sprop-stereo=1'
+    );
+    
+    // Add higher bandwidth constraints for clearer audio
+    enhancedSdp = enhancedSdp.replace(
+        /m=audio \d+ RTP\/SAVPF/g,
+        (match) => {
+            return match + '\r\na=b=AS:256'; // 256 kbps audio bandwidth for clarity
+        }
+    );
+    
+    // Enable audio level indication for better processing
+    if (!enhancedSdp.includes('a=extmap:1')) {
+        enhancedSdp = enhancedSdp.replace(
+            /a=mid:audio/g,
+            'a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\na=mid:audio'
+        );
+    }
+    
+    // Add comfort noise for better audio continuity
+    if (!enhancedSdp.includes('a=rtpmap:13 CN/8000')) {
+        enhancedSdp = enhancedSdp.replace(
+            /a=rtpmap:111 opus\/48000\/2/g,
+            'a=rtpmap:111 opus/48000/2\r\na=rtpmap:13 CN/8000'
+        );
+    }
+    
+    // Add packet time optimization for lower latency
+    enhancedSdp = enhancedSdp.replace(
+        /a=ptime:20/g,
+        'a=ptime:10' // Reduce packet time for lower latency
+    );
+    
+    return enhancedSdp;
 }
 
 // Voice Chat Functions
@@ -432,7 +456,29 @@ async function initializeVoiceChat(username, roomId) {
         } else {
             // Real mode - get user media and connect to server
             console.log('Getting user media...');
-            voiceChat.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Enhanced audio constraints for clearer, crisper sound
+            const audioConstraints = {
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: false, // Disable noise suppression for clearer sound
+                    autoGainControl: false, // Disable auto gain for more natural levels
+                    sampleRate: 48000,
+                    channelCount: 1,
+                    volume: 1.0,
+                    latency: 0,
+                    // Prefer high-quality audio devices
+                    deviceId: undefined, // Let user choose best device
+                    // Minimal audio processing for clarity
+                    googEchoCancellation: true,
+                    googAutoGainControl: false, // Disable for clearer sound
+                    googNoiseSuppression: false, // Disable for less muffled sound
+                    googHighpassFilter: false, // Disable for fuller sound
+                    googTypingNoiseDetection: false, // Disable for cleaner audio
+                    googAudioMirroring: false
+                }
+            };
+            
+            voiceChat.localStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
             console.log('Local stream obtained:', voiceChat.localStream);
             console.log('Audio tracks:', voiceChat.localStream.getAudioTracks().length);
             voiceChat.localStream.getAudioTracks().forEach(track => {
@@ -564,10 +610,7 @@ function handleSignalingMessage(event) {
                     voiceChat.participants.set(participant.id, participant);
                     console.log('✅ Added participant to list:', participant.id, participant.username);
                     
-                    // Add a small delay to prevent simultaneous offer creation
-                    setTimeout(() => {
-                        createPeerConnection(participant.id);
-                    }, Math.random() * 1000); // Random delay 0-1 second
+                    createPeerConnection(participant.id);
                 } else {
                     console.log('🔗 Skipping peer connection to self in room-joined:', participant.id);
                 }
@@ -705,13 +748,57 @@ async function createPeerConnection(remoteUserId) {
             tracks: remoteStream.getTracks().map(t => ({ kind: t.kind, id: t.id, enabled: t.enabled }))
         });
         
-        // Create audio element for remote audio
+        // Create audio element for remote audio with quality improvements
         const audioElement = document.createElement('audio');
         audioElement.id = `audio-${remoteUserId}`;
         audioElement.autoplay = true;
         audioElement.controls = false;
         audioElement.style.display = 'none';
         audioElement.playsInline = true;
+        
+        // Audio quality improvements for clarity
+        audioElement.preload = 'auto';
+        audioElement.crossOrigin = 'anonymous';
+        
+        // Reduce latency
+        if (audioElement.mozAudioChannelType !== undefined) {
+            audioElement.mozAudioChannelType = 'content';
+        }
+        
+        // Add audio context for clarity enhancement with volume control
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(remoteStream);
+            const gainNode = audioContext.createGain();
+            const biquadFilter = audioContext.createBiquadFilter();
+            
+            // Configure filter for clarity enhancement
+            biquadFilter.type = 'highshelf';
+            biquadFilter.frequency.value = 3000; // Enhance high frequencies
+            biquadFilter.gain.value = 3; // Boost clarity
+            
+            // Set initial volume from user preferences
+            const userVolume = voiceChat.userVolumes.get(remoteUserId) || 1.0;
+            const isUserMuted = voiceChat.userMutes.get(remoteUserId) || false;
+            gainNode.gain.value = isUserMuted ? 0 : userVolume * 1.2; // Apply volume and clarity boost
+            
+            // Connect audio nodes
+            source.connect(biquadFilter);
+            biquadFilter.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Store audio context and nodes for volume/mute control
+            if (!voiceChat.audioContexts) {
+                voiceChat.audioContexts = new Map();
+            }
+            if (!voiceChat.audioGainNodes) {
+                voiceChat.audioGainNodes = new Map();
+            }
+            voiceChat.audioContexts.set(remoteUserId, audioContext);
+            voiceChat.audioGainNodes.set(remoteUserId, gainNode);
+        } catch (error) {
+            console.log('Audio context enhancement not available:', error);
+        }
         
         // Set initial volume from user preferences
         const userVolume = voiceChat.userVolumes.get(remoteUserId) || 1.0;
@@ -724,6 +811,9 @@ async function createPeerConnection(remoteUserId) {
         
         // Add to page (hidden)
         document.body.appendChild(audioElement);
+        
+        // Set up voice activity detection for remote user
+        setupVoiceActivityDetection(remoteUserId, remoteStream);
         
         // Ensure audio plays
         audioElement.play().then(() => {
@@ -761,23 +851,31 @@ async function createPeerConnection(remoteUserId) {
         console.log('Added remote audio for user:', remoteUserId, 'audio element:', audioElement);
     };
     
-    // Create and send offer
-    try {
-        console.log('Creating offer for user:', remoteUserId);
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+    // Create and send offer only if we have the smaller user ID (prevents glare)
+    if (voiceChat.localUserId < remoteUserId) {
         try {
-            voiceChat.ws.send(JSON.stringify({
-                type: 'offer',
-                targetUserId: remoteUserId,
-                offer: offer
-            }));
-            console.log('Offer sent successfully for user:', remoteUserId);
+            console.log('Creating offer for user:', remoteUserId);
+            const offer = await pc.createOffer();
+            
+            // Enhance SDP for better audio quality
+            offer.sdp = enhanceSDPForAudioQuality(offer.sdp);
+            
+            await pc.setLocalDescription(offer);
+            try {
+                voiceChat.ws.send(JSON.stringify({
+                    type: 'offer',
+                    targetUserId: remoteUserId,
+                    offer: offer
+                }));
+                console.log('Offer sent successfully for user:', remoteUserId);
+            } catch (error) {
+                console.error('Failed to send offer for user:', remoteUserId, error);
+            }
         } catch (error) {
-            console.error('Failed to send offer for user:', remoteUserId, error);
+            console.error('Error creating offer for user:', remoteUserId, error);
         }
-    } catch (error) {
-        console.error('Error creating offer for user:', remoteUserId, error);
+    } else {
+        console.log('Waiting for offer from user:', remoteUserId, '(they have smaller user ID)');
     }
 }
 
@@ -822,13 +920,57 @@ async function handleOffer(fromUserId, offer) {
             const remoteStream = event.streams[0];
             console.log('Received remote stream for user:', fromUserId, 'tracks:', remoteStream.getTracks().length);
             
-            // Create audio element for remote audio
+            // Create audio element for remote audio with quality improvements
             const audioElement = document.createElement('audio');
             audioElement.id = `audio-${fromUserId}`;
             audioElement.autoplay = true;
             audioElement.controls = false;
             audioElement.style.display = 'none';
             audioElement.playsInline = true;
+            
+            // Audio quality improvements for clarity
+            audioElement.preload = 'auto';
+            audioElement.crossOrigin = 'anonymous';
+            
+            // Reduce latency
+            if (audioElement.mozAudioChannelType !== undefined) {
+                audioElement.mozAudioChannelType = 'content';
+            }
+            
+            // Add audio context for clarity enhancement with volume control
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(remoteStream);
+                const gainNode = audioContext.createGain();
+                const biquadFilter = audioContext.createBiquadFilter();
+                
+                // Configure filter for clarity enhancement
+                biquadFilter.type = 'highshelf';
+                biquadFilter.frequency.value = 3000; // Enhance high frequencies
+                biquadFilter.gain.value = 3; // Boost clarity
+                
+                // Set initial volume from user preferences
+                const userVolume = voiceChat.userVolumes.get(fromUserId) || 1.0;
+                const isUserMuted = voiceChat.userMutes.get(fromUserId) || false;
+                gainNode.gain.value = isUserMuted ? 0 : userVolume * 1.2; // Apply volume and clarity boost
+                
+                // Connect audio nodes
+                source.connect(biquadFilter);
+                biquadFilter.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Store audio context and nodes for volume/mute control
+                if (!voiceChat.audioContexts) {
+                    voiceChat.audioContexts = new Map();
+                }
+                if (!voiceChat.audioGainNodes) {
+                    voiceChat.audioGainNodes = new Map();
+                }
+                voiceChat.audioContexts.set(fromUserId, audioContext);
+                voiceChat.audioGainNodes.set(fromUserId, gainNode);
+            } catch (error) {
+                console.log('Audio context enhancement not available:', error);
+            }
             
             // Set initial volume from user preferences
             const userVolume = voiceChat.userVolumes.get(fromUserId) || 1.0;
@@ -878,6 +1020,10 @@ async function handleOffer(fromUserId, offer) {
         console.log('Remote description set for user:', fromUserId);
         
         const answer = await pc.createAnswer();
+        
+        // Enhance answer SDP for better audio quality
+        answer.sdp = enhanceSDPForAudioQuality(answer.sdp);
+        
         await pc.setLocalDescription(answer);
         console.log('Answer created and set for user:', fromUserId);
         
@@ -910,22 +1056,10 @@ async function handleAnswer(fromUserId, answer) {
         try {
             console.log('Current signaling state for answer from user:', fromUserId, 'State:', pc.signalingState);
             
-            // Check if we're in the right state to set remote description
+            // Only set remote description if we're in the right state
             if (pc.signalingState === 'have-local-offer') {
                 await pc.setRemoteDescription(answer);
                 console.log('Remote description set from answer for user:', fromUserId);
-            } else if (pc.signalingState === 'stable') {
-                console.warn('⚠️ Signaling state conflict detected - attempting rollback for user:', fromUserId);
-                try {
-                    // Try to rollback and set the answer
-                    await Promise.all([
-                        pc.setLocalDescription({ type: 'rollback' }),
-                        pc.setRemoteDescription(answer)
-                    ]);
-                    console.log('✅ Rollback successful, remote description set for user:', fromUserId);
-                } catch (rollbackError) {
-                    console.error('❌ Rollback failed for user:', fromUserId, rollbackError);
-                }
             } else {
                 console.warn('⚠️ Cannot set remote description - wrong signaling state:', pc.signalingState, 'for user:', fromUserId);
                 console.warn('⚠️ This usually means both users tried to create offers simultaneously');
@@ -1015,11 +1149,24 @@ function leaveVoiceChat() {
             voiceChat.localStream = null;
         }
         
-        // Remove all remote audio elements
+        // Remove all remote audio elements and cleanup audio contexts
         voiceChat.participants.forEach(participant => {
             const audioElement = document.getElementById(`audio-${participant.id}`);
             if (audioElement) {
                 audioElement.remove();
+            }
+            
+            // Cleanup audio context and gain nodes for this user
+            if (voiceChat.audioContexts && voiceChat.audioContexts.has(participant.id)) {
+                const audioContext = voiceChat.audioContexts.get(participant.id);
+                if (audioContext && audioContext.state !== 'closed') {
+                    audioContext.close();
+                }
+                voiceChat.audioContexts.delete(participant.id);
+            }
+            
+            if (voiceChat.audioGainNodes && voiceChat.audioGainNodes.has(participant.id)) {
+                voiceChat.audioGainNodes.delete(participant.id);
             }
         });
         
@@ -1077,11 +1224,7 @@ function showVoiceChatUI() {
                     <!-- Users will be populated here -->
                 </div>
             </div>
-            <div style="padding: 8px; text-align: center;">
-                <button id="debug-btn" style="background: #333; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">
-                    🔍 Debug
-                </button>
-            </div>
+
         </div>
     `;
     
@@ -1093,7 +1236,6 @@ function showVoiceChatUI() {
 function setupVoiceChatListeners() {
     const muteBtn = document.getElementById('moonmic-mute-btn');
     const leaveBtn = document.getElementById('moonmic-leave-btn');
-    const debugBtn = document.getElementById('debug-btn');
     
     if (muteBtn) {
         muteBtn.addEventListener('click', toggleMute);
@@ -1101,146 +1243,6 @@ function setupVoiceChatListeners() {
     
     if (leaveBtn) {
         leaveBtn.addEventListener('click', leaveVoiceChat);
-    }
-    
-    if (debugBtn) {
-        console.log('Debug button found, adding event listener');
-        debugBtn.addEventListener('click', () => {
-            // Create debug info
-            const debugInfo = {
-                username: voiceChat.username,
-                roomId: voiceChat.roomId,
-                localUserId: voiceChat.localUserId,
-                isMuted: voiceChat.isMuted,
-                wsConnected: !!voiceChat.ws,
-                participantsCount: voiceChat.participants.size,
-                peerConnectionsCount: voiceChat.peerConnections.size,
-                participants: Array.from(voiceChat.participants.values()),
-                peerConnections: Array.from(voiceChat.peerConnections.keys())
-            };
-            
-            // Test WebSocket connection
-            let wsTest = '❌ No WebSocket connection';
-            if (voiceChat.ws) {
-                wsTest = `✅ WebSocket connected (State: ${voiceChat.ws.readyState})`;
-                wsTest += `\nURL: ${voiceChat.ws.url}`;
-                
-                // Send a test message
-                try {
-                    voiceChat.ws.send(JSON.stringify({
-                        type: 'ping',
-                        timestamp: Date.now()
-                    }));
-                    wsTest += '\n✅ Ping sent successfully';
-                } catch (error) {
-                    wsTest += `\n❌ Ping failed: ${error.message}`;
-                }
-                
-                // Test if we can send a join-room message
-                try {
-                    const joinMessage = {
-                        type: 'join-room',
-                        roomId: voiceChat.roomId,
-                        username: voiceChat.username
-                    };
-                    voiceChat.ws.send(JSON.stringify(joinMessage));
-                    wsTest += '\n✅ Join-room message sent';
-                    console.log('🔍 DEBUG: Sent join-room message:', joinMessage);
-                } catch (error) {
-                    wsTest += `\n❌ Join-room failed: ${error.message}`;
-                }
-                
-                // Test echo functionality
-                try {
-                    const echoMessage = {
-                        type: 'echo',
-                        message: 'Hello from client!'
-                    };
-                    voiceChat.ws.send(JSON.stringify(echoMessage));
-                    wsTest += '\n✅ Echo message sent';
-                    console.log('🔍 DEBUG: Sent echo message:', echoMessage);
-                } catch (error) {
-                    wsTest += `\n❌ Echo failed: ${error.message}`;
-                }
-            }
-            
-            // Create debug popup
-            const debugPopup = document.createElement('div');
-            debugPopup.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: #1a1a1a;
-                color: white;
-                padding: 20px;
-                border-radius: 8px;
-                border: 2px solid #333;
-                z-index: 1000000;
-                max-width: 500px;
-                max-height: 400px;
-                overflow-y: auto;
-                font-family: monospace;
-                font-size: 12px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.8);
-            `;
-            
-            debugPopup.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="margin: 0; color: #00ff00;">🔍 Debug Info</h3>
-                    <button onclick="this.parentElement.parentElement.remove()" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">✕</button>
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <strong>Username:</strong> ${debugInfo.username || 'Not set'}<br>
-                    <strong>Room ID:</strong> ${debugInfo.roomId || 'Not set'}<br>
-                    <strong>Local User ID:</strong> ${debugInfo.localUserId || 'Not set'}<br>
-                    <strong>Muted:</strong> ${debugInfo.isMuted ? 'Yes' : 'No'}<br>
-                    <strong>WebSocket:</strong> ${debugInfo.wsConnected ? 'Connected' : 'Not connected'}<br>
-                    <strong>Participants:</strong> ${debugInfo.participantsCount}<br>
-                    <strong>Peer Connections:</strong> ${debugInfo.peerConnectionsCount}
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <strong>WebSocket Test:</strong><br>
-                    <pre style="background: #333; padding: 8px; border-radius: 4px; margin: 5px 0; white-space: pre-wrap;">${wsTest}</pre>
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <strong>Participants:</strong><br>
-                    <pre style="background: #333; padding: 8px; border-radius: 4px; margin: 5px 0; white-space: pre-wrap;">${JSON.stringify(debugInfo.participants, null, 2)}</pre>
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <strong>Peer Connections:</strong><br>
-                    <pre style="background: #333; padding: 8px; border-radius: 4px; margin: 5px 0; white-space: pre-wrap;">${JSON.stringify(debugInfo.peerConnections, null, 2)}</pre>
-                </div>
-                <button onclick="this.parentElement.remove()" style="background: #444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: 100%;">Close</button>
-            `;
-            
-            document.body.appendChild(debugPopup);
-            
-            // Force update participants list
-            updateParticipantsList();
-            
-            // Add debug logging to existing message handler
-            if (voiceChat.ws && voiceChat.ws.onmessage) {
-                const originalOnMessage = voiceChat.ws.onmessage;
-                voiceChat.ws.onmessage = (event) => {
-                    console.log('🔍 DEBUG: Raw message received:', event.data);
-                    // Parse and log the message type
-                    try {
-                        const data = JSON.parse(event.data);
-                        console.log('🔍 DEBUG: Message type:', data.type);
-                        console.log('🔍 DEBUG: Full message data:', data);
-                    } catch (error) {
-                        console.log('🔍 DEBUG: Failed to parse message:', error);
-                    }
-                    // Call the original handler
-                    originalOnMessage(event);
-                };
-            } else {
-                console.log('🔍 DEBUG: No WebSocket or message handler found');
-            }
-        });
-    } else {
-        console.error('Debug button not found!');
     }
 }
 
@@ -1484,6 +1486,13 @@ function setUserVolume(userId, volume) {
         audioElement.volume = volume;
     }
     
+    // Update the audio gain node if using Web Audio API
+    if (voiceChat.audioGainNodes && voiceChat.audioGainNodes.has(userId)) {
+        const gainNode = voiceChat.audioGainNodes.get(userId);
+        const isMuted = voiceChat.userMutes.get(userId) || false;
+        gainNode.gain.value = isMuted ? 0 : volume * 1.2; // Apply volume and clarity boost
+    }
+    
     // Update the volume slider value
     const volumeSlider = document.querySelector(`.moonmic-volume-slider[data-user-id="${userId}"]`);
     if (volumeSlider) {
@@ -1501,6 +1510,13 @@ function toggleUserMute(userId) {
     const audioElement = document.getElementById(`audio-${userId}`);
     if (audioElement) {
         audioElement.muted = newMuteState;
+    }
+    
+    // Update the audio gain node if using Web Audio API
+    if (voiceChat.audioGainNodes && voiceChat.audioGainNodes.has(userId)) {
+        const gainNode = voiceChat.audioGainNodes.get(userId);
+        const volume = voiceChat.userVolumes.get(userId) || 1.0;
+        gainNode.gain.value = newMuteState ? 0 : volume * 1.2; // Apply volume and clarity boost
     }
     
     // Update the mute button icon
@@ -1551,9 +1567,9 @@ function setupVoiceActivityDetection(userId, stream) {
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
     
-    // Configure analyser
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.8;
+    // Configure analyser for higher sensitivity
+    analyser.fftSize = 512; // Higher resolution for better detection
+    analyser.smoothingTimeConstant = 0.3; // Less smoothing for more responsive detection
     
     // Connect the audio nodes
     source.connect(analyser);
@@ -1567,22 +1583,44 @@ function setupVoiceActivityDetection(userId, stream) {
     }
     voiceChat.voiceAnalysers.set(userId, analyser);
     
-    // Function to update voice meter
+    // Function to update voice meter with higher sensitivity
     function updateVoiceMeter() {
         analyser.getByteFrequencyData(dataArray);
         
-        // Calculate average volume level
+        // Calculate volume level with higher sensitivity
         let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-        }
-        const average = sum / dataArray.length;
+        let maxValue = 0;
         
-        // Convert to percentage (0-100)
-        const volumeLevel = Math.min(100, (average / 128) * 100);
+        // Focus on speech frequencies (85Hz - 255Hz and 255Hz - 2000Hz)
+        const speechRange1 = Math.floor(85 * analyser.fftSize / audioContext.sampleRate);
+        const speechRange2 = Math.floor(255 * analyser.fftSize / audioContext.sampleRate);
+        const speechRange3 = Math.floor(2000 * analyser.fftSize / audioContext.sampleRate);
+        
+        for (let i = 0; i < dataArray.length; i++) {
+            // Give more weight to speech frequencies
+            let weight = 1.0;
+            if (i >= speechRange1 && i <= speechRange2) {
+                weight = 2.0; // Double weight for lower speech frequencies
+            } else if (i > speechRange2 && i <= speechRange3) {
+                weight = 1.5; // 1.5x weight for higher speech frequencies
+            }
+            
+            sum += dataArray[i] * weight;
+            maxValue = Math.max(maxValue, dataArray[i]);
+        }
+        
+        // Use both average and max for better sensitivity
+        const weightedAverage = sum / dataArray.length;
+        const volumeLevel = Math.min(100, Math.max(
+            (weightedAverage / 64) * 100, // More sensitive scaling
+            (maxValue / 128) * 100 // Also consider peak values
+        ));
+        
+        // Apply additional sensitivity boost
+        const boostedVolumeLevel = Math.min(100, volumeLevel * 2.5);
         
         // Update voice meter in UI
-        updateVoiceMeterUI(userId, volumeLevel);
+        updateVoiceMeterUI(userId, boostedVolumeLevel);
         
         // Continue monitoring
         requestAnimationFrame(updateVoiceMeter);
@@ -1599,11 +1637,11 @@ function updateVoiceMeterUI(userId, volumeLevel) {
         // Update the meter width based on volume level
         voiceMeter.style.width = `${volumeLevel}%`;
         
-        // Change color based on activity level
-        if (volumeLevel > 30) {
-            voiceMeter.style.backgroundColor = '#4CAF50'; // Green for active
-        } else if (volumeLevel > 10) {
-            voiceMeter.style.backgroundColor = '#FF9800'; // Orange for low activity
+        // Change color based on activity level (more sensitive thresholds)
+        if (volumeLevel > 15) {
+            voiceMeter.style.backgroundColor = '#4CAF50'; // Green for active (lowered from 30)
+        } else if (volumeLevel > 5) {
+            voiceMeter.style.backgroundColor = '#FF9800'; // Orange for low activity (lowered from 10)
         } else {
             voiceMeter.style.backgroundColor = '#9E9E9E'; // Gray for no activity
         }
