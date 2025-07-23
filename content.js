@@ -993,12 +993,14 @@ function setupVoiceChatListeners() {
                 
                 // Test if we can send a join-room message
                 try {
-                    voiceChat.ws.send(JSON.stringify({
+                    const joinMessage = {
                         type: 'join-room',
                         roomId: voiceChat.roomId,
                         username: voiceChat.username
-                    }));
+                    };
+                    voiceChat.ws.send(JSON.stringify(joinMessage));
                     wsTest += '\n✅ Join-room message sent';
+                    console.log('🔍 DEBUG: Sent join-room message:', joinMessage);
                 } catch (error) {
                     wsTest += `\n❌ Join-room failed: ${error.message}`;
                 }
@@ -1058,6 +1060,17 @@ function setupVoiceChatListeners() {
             
             // Force update participants list
             updateParticipantsList();
+            
+            // Add a simple message listener to see what we receive
+            if (voiceChat.ws) {
+                const originalOnMessage = voiceChat.ws.onmessage;
+                voiceChat.ws.onmessage = (event) => {
+                    console.log('🔍 DEBUG: Raw message received:', event.data);
+                    if (originalOnMessage) {
+                        originalOnMessage(event);
+                    }
+                };
+            }
         });
     } else {
         console.error('Debug button not found!');
