@@ -544,8 +544,13 @@ function handleSignalingMessage(event) {
         case 'room-joined':
             console.log('🎉 Room joined successfully. Local user ID:', data.userId);
             console.log('📋 Existing participants:', data.participants);
+            console.log('🏠 Room ID:', voiceChat.roomId);
             voiceChat.localUserId = data.userId;
             console.log('✅ Set local user ID to:', voiceChat.localUserId);
+            
+            // Clear existing participants and add new ones
+            voiceChat.participants.clear();
+            
             data.participants.forEach(participant => {
                 if (participant.id !== voiceChat.localUserId) {
                     console.log('🔗 Creating peer connection for existing participant:', participant.id, participant.username);
@@ -556,19 +561,24 @@ function handleSignalingMessage(event) {
                 }
             });
             console.log('📊 Final participants after room-joined:', Array.from(voiceChat.participants.values()));
+            console.log('👥 Total participants count:', voiceChat.participants.size + 1); // +1 for self
             updateParticipantsList();
             break;
             
         case 'user-joined':
-            console.log('User joined:', data.userId, data.username);
-            console.log('Current participants before adding:', Array.from(voiceChat.participants.values()));
+            console.log('👤 User joined:', data.userId, data.username);
+            console.log('🏠 Room ID:', voiceChat.roomId);
+            console.log('🆔 Local user ID:', voiceChat.localUserId);
+            console.log('📋 Current participants before adding:', Array.from(voiceChat.participants.values()));
             
             // Don't create peer connection to ourselves
             if (data.userId === voiceChat.localUserId) {
-                console.log('Skipping peer connection to self:', data.userId);
+                console.log('❌ Skipping peer connection to self:', data.userId);
             } else {
                 voiceChat.participants.set(data.userId, { id: data.userId, username: data.username });
-                console.log('Current participants after adding:', Array.from(voiceChat.participants.values()));
+                console.log('✅ Added participant:', data.userId, data.username);
+                console.log('📋 Current participants after adding:', Array.from(voiceChat.participants.values()));
+                console.log('👥 Total participants count:', voiceChat.participants.size + 1); // +1 for self
                 createPeerConnection(data.userId);
             }
             updateParticipantsList();
@@ -1187,8 +1197,10 @@ function updateParticipantsList() {
         return;
     }
     
-    console.log('Updating participants list. Current participants:', Array.from(voiceChat.participants.values()));
-    console.log('Local user:', voiceChat.username, 'Local user ID:', voiceChat.localUserId);
+    console.log('🔄 Updating participants list');
+    console.log('📋 Current participants:', Array.from(voiceChat.participants.values()));
+    console.log('👤 Local user:', voiceChat.username, 'Local user ID:', voiceChat.localUserId);
+    console.log('👥 Total count (including self):', voiceChat.participants.size + 1);
     
     let html = '';
     
