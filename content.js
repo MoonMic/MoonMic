@@ -483,6 +483,8 @@ async function connectToSignalingServer() {
                 username: voiceChat.username
             };
             console.log('📤 Sending join-room message:', joinMessage);
+            console.log('🏠 Room ID being joined:', voiceChat.roomId);
+            console.log('👤 Username joining:', voiceChat.username);
             try {
                 voiceChat.ws.send(JSON.stringify(joinMessage));
                 console.log('✅ Join-room message sent successfully');
@@ -501,6 +503,7 @@ async function connectToSignalingServer() {
                     
                     if (data.type === 'room-joined' && !roomJoined) {
                         console.log('🎉 Successfully joined room:', voiceChat.roomId);
+                        console.log('📋 Room-joined data received:', data);
                         roomJoined = true;
                         resolve();
                     }
@@ -529,7 +532,8 @@ function handleSignalingMessage(event) {
     let data;
     try {
         data = JSON.parse(event.data);
-        console.log('📨 Received signaling message:', data.type, data);
+        console.log('📨 Received signaling message:', data.type, '►', data);
+        console.log('🔍 Full message data:', JSON.stringify(data, null, 2));
     } catch (error) {
         console.error('❌ Failed to parse signaling message:', error, 'Raw message:', event.data);
         return;
