@@ -610,12 +610,22 @@ async function createPeerConnection(remoteUserId) {
     
     // Handle connection state changes
     pc.onconnectionstatechange = () => {
-        console.log('Peer connection state changed for user:', remoteUserId, 'State:', pc.connectionState);
+        console.log('🔗 Peer connection state changed for user:', remoteUserId, 'State:', pc.connectionState);
+        if (pc.connectionState === 'connected') {
+            console.log('✅ WebRTC connection established for user:', remoteUserId);
+        } else if (pc.connectionState === 'failed') {
+            console.error('❌ WebRTC connection failed for user:', remoteUserId);
+        }
     };
     
     // Handle ICE connection state changes
     pc.oniceconnectionstatechange = () => {
-        console.log('ICE connection state changed for user:', remoteUserId, 'State:', pc.iceConnectionState);
+        console.log('🧊 ICE connection state changed for user:', remoteUserId, 'State:', pc.iceConnectionState);
+        if (pc.iceConnectionState === 'connected') {
+            console.log('✅ ICE connection established for user:', remoteUserId);
+        } else if (pc.iceConnectionState === 'failed') {
+            console.error('❌ ICE connection failed for user:', remoteUserId);
+        }
     };
     
     // Handle ICE candidates
@@ -637,7 +647,12 @@ async function createPeerConnection(remoteUserId) {
     // Handle remote stream
     pc.ontrack = (event) => {
         const remoteStream = event.streams[0];
-        console.log('Received remote stream for user:', remoteUserId, 'tracks:', remoteStream.getTracks().length);
+        console.log('🎵 Received remote stream for user:', remoteUserId, 'tracks:', remoteStream.getTracks().length);
+        console.log('🎵 Remote stream details:', {
+            id: remoteStream.id,
+            active: remoteStream.active,
+            tracks: remoteStream.getTracks().map(t => ({ kind: t.kind, id: t.id, enabled: t.enabled }))
+        });
         
         // Create audio element for remote audio
         const audioElement = document.createElement('audio');
@@ -661,9 +676,22 @@ async function createPeerConnection(remoteUserId) {
         
         // Ensure audio plays
         audioElement.play().then(() => {
-            console.log('Audio started playing for user:', remoteUserId);
+            console.log('🎵 Audio started playing for user:', remoteUserId);
+            console.log('🎵 Audio element state:', {
+                volume: audioElement.volume,
+                muted: audioElement.muted,
+                paused: audioElement.paused,
+                readyState: audioElement.readyState,
+                currentTime: audioElement.currentTime
+            });
         }).catch(error => {
-            console.error('Failed to play audio for user:', remoteUserId, error);
+            console.error('❌ Failed to play audio for user:', remoteUserId, error);
+            console.error('❌ Audio element state when failed:', {
+                volume: audioElement.volume,
+                muted: audioElement.muted,
+                paused: audioElement.paused,
+                readyState: audioElement.readyState
+            });
         });
         
         // Add event listeners for debugging
