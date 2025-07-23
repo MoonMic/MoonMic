@@ -486,14 +486,15 @@ async function connectToSignalingServer() {
             }
             
             // Wait for room-joined confirmation before resolving
-            const originalOnMessage = voiceChat.ws.onmessage;
+            let roomJoined = false;
             voiceChat.ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                if (data.type === 'room-joined') {
+                if (data.type === 'room-joined' && !roomJoined) {
                     console.log('Successfully joined room:', voiceChat.roomId);
+                    roomJoined = true;
                     resolve();
                 }
-                // Still call the original handler for other messages
+                // Always call the handler for all messages
                 handleSignalingMessage(event);
             };
         };
