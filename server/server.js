@@ -20,6 +20,16 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test endpoint
+app.get('/test', (req, res) => {
+    res.json({ 
+        status: 'test-ok', 
+        timestamp: new Date().toISOString(),
+        message: 'Server is running with updated code!',
+        version: '1.0.1'
+    });
+});
+
 // WebSocket server
 const wss = new WebSocket.Server({ server });
 
@@ -232,6 +242,32 @@ wss.on('connection', (ws, req) => {
                         }
                     });
                     log(`User mute toggle`, { userId: clientId, isMuted });
+                    break;
+                    
+                case 'echo':
+                    log('Received echo request', { clientId: currentUser?.id, message: data.message });
+                    try {
+                        ws.send(JSON.stringify({
+                            type: 'echo-response',
+                            message: data.message,
+                            timestamp: Date.now()
+                        }));
+                    } catch (error) {
+                        log('Failed to send echo response', { error: error.message });
+                    }
+                    break;
+                    
+                case 'ping':
+                    log('Received ping from client', { clientId: currentUser?.id });
+                    try {
+                        ws.send(JSON.stringify({
+                            type: 'pong',
+                            timestamp: data.timestamp,
+                            serverTime: Date.now()
+                        }));
+                    } catch (error) {
+                        log('Failed to send pong', { error: error.message });
+                    }
                     break;
                     
                 case 'leave-room':
