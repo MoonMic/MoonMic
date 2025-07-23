@@ -257,5 +257,7 @@ wss.on('connection', (ws) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Voice chat signaling server running on port ${PORT}`);
+    console.log(`🚀 MoonMic Voice Chat Server running on port ${PORT}`);
+    console.log(`📡 WebSocket server ready for connections`);
+    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 }); 
