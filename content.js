@@ -1197,7 +1197,14 @@ function setupUserControls() {
             setUserVolume(userId, volume);
         });
         
-        // Note: Removed auto-hide functionality - now controlled by manual toggle
+        // Auto-hide volume controls when user releases the slider
+        slider.addEventListener('change', function() {
+            const userId = this.getAttribute('data-user-id');
+            // Add a small delay to allow the user to see the final value
+            setTimeout(() => {
+                hideVolumeControls(userId);
+            }, 500);
+        });
     });
     
     // Setup mute buttons
@@ -1206,6 +1213,10 @@ function setupUserControls() {
         button.addEventListener('click', function() {
             const userId = this.getAttribute('data-user-id');
             toggleUserMute(userId);
+            // Auto-hide volume controls after mute toggle
+            setTimeout(() => {
+                hideVolumeControls(userId);
+            }, 300);
         });
     });
 }
