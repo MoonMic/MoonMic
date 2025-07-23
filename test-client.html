@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MoonMic Test Client</title>
+</head>
+<body>
+    <h1>MoonMic Test Client</h1>
+    <button onclick="testConnection()">Test Connection</button>
+    <div id="log"></div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += '<div>' + new Date().toISOString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+
+        async function testConnection() {
+            try {
+                log('Starting connection test...');
+                
+                // Connect to WebSocket
+                const ws = new WebSocket('ws://localhost:3000');
+                
+                ws.onopen = () => {
+                    log('WebSocket connected');
+                    
+                    // Send join-room message
+                    const joinMessage = {
+                        type: 'join-room',
+                        roomId: 'test-room-123',
+                        username: 'TestUser'
+                    };
+                    
+                    log('Sending join-room message: ' + JSON.stringify(joinMessage));
+                    ws.send(JSON.stringify(joinMessage));
+                };
+                
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    log('Received message: ' + JSON.stringify(data));
+                };
+                
+                ws.onerror = (error) => {
+                    log('WebSocket error: ' + error);
+                };
+                
+                ws.onclose = () => {
+                    log('WebSocket closed');
+                };
+                
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html> 

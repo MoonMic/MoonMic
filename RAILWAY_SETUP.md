@@ -1,4 +1,4 @@
-# 🚂 Railway Deployment Guide for MoonMic
+o   # 🚂 Railway Deployment Guide for MoonMic
 
 ## Why Railway?
 - ✅ **500 free hours/month** - Enough for ~16 hours/day
