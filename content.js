@@ -522,8 +522,9 @@ async function connectToSignalingServer() {
 }
 
 function handleSignalingMessage(event) {
+    let data;
     try {
-        const data = JSON.parse(event.data);
+        data = JSON.parse(event.data);
         console.log('📨 Received signaling message:', data.type, data);
     } catch (error) {
         console.error('❌ Failed to parse signaling message:', error, 'Raw message:', event.data);
