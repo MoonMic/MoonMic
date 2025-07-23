@@ -44,6 +44,9 @@ server.on('error', (error) => {
 // Store active rooms and their participants
 const rooms = new Map();
 
+// Add a simple message counter for debugging
+let messageCounter = 0;
+
 wss.on('connection', (ws) => {
     const clientId = Date.now() + Math.random().toString(36).substr(2, 9);
     log('New client connected', { clientId });
@@ -53,7 +56,9 @@ wss.on('connection', (ws) => {
     
     ws.on('message', (message) => {
         try {
+            messageCounter++;
             const data = JSON.parse(message);
+            log(`📨 Message #${messageCounter} received`, { type: data.type, clientId });
             
             switch (data.type) {
                 case 'join-room':
