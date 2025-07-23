@@ -460,6 +460,8 @@ async function connectToSignalingServer() {
     return new Promise((resolve, reject) => {
         // Connect to server (local or production)
         const wsUrl = SERVER_URL;
+        console.log('🔍 DEBUG: Attempting WebSocket connection to:', wsUrl);
+        console.log('🔍 DEBUG: SERVER_URL constant value:', SERVER_URL);
         voiceChat.ws = new WebSocket(wsUrl);
         
         let connectionTimeout = setTimeout(() => {
