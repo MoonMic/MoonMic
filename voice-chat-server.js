@@ -61,13 +61,30 @@ wss.on('connection', (ws) => {
                     room.set(currentUser.id, currentUser);
                     
                     // Notify all users in the room about the new user
+                    log('Notifying existing users about new user', { 
+                        newUserId: currentUser.id, 
+                        newUsername: currentUser.username,
+                        existingUsers: Array.from(room.keys()).filter(id => id !== currentUser.id)
+                    });
+                    
                     room.forEach((user) => {
                         if (user.ws !== ws) {
-                            user.ws.send(JSON.stringify({
-                                type: 'user-joined',
-                                userId: currentUser.id,
-                                username: currentUser.username
-                            }));
+                            try {
+                                user.ws.send(JSON.stringify({
+                                    type: 'user-joined',
+                                    userId: currentUser.id,
+                                    username: currentUser.username
+                                }));
+                                log('Sent user-joined message', { 
+                                    from: currentUser.id, 
+                                    to: user.id 
+                                });
+                            } catch (sendError) {
+                                log('Failed to send user-joined message', { 
+                                    error: sendError.message, 
+                                    targetUser: user.id 
+                                });
+                            }
                         }
                     });
                     
@@ -77,11 +94,24 @@ wss.on('connection', (ws) => {
                         username: user.username
                     }));
                     
-                    ws.send(JSON.stringify({
-                        type: 'room-joined',
-                        participants,
-                        userId: currentUser.id
-                    }));
+                    log('Sending room-joined message to new user', { 
+                        userId: currentUser.id, 
+                        participants: participants 
+                    });
+                    
+                    try {
+                        ws.send(JSON.stringify({
+                            type: 'room-joined',
+                            participants,
+                            userId: currentUser.id
+                        }));
+                        log('Room-joined message sent successfully', { userId: currentUser.id });
+                    } catch (sendError) {
+                        log('Failed to send room-joined message', { 
+                            error: sendError.message, 
+                            userId: currentUser.id 
+                        });
+                    }
                     
                     log(`User joined room`, { username, roomId, participantsCount: room.size });
                     break;
@@ -151,6 +181,19 @@ wss.on('connection', (ws) => {
                             }));
                         }
                     });
+                    break;
+                    
+                case 'ping':
+                    log('Received ping from client', { clientId: currentUser?.id });
+                    try {
+                        ws.send(JSON.stringify({
+                            type: 'pong',
+                            timestamp: data.timestamp,
+                            serverTime: Date.now()
+                        }));
+                    } catch (error) {
+                        log('Failed to send pong', { error: error.message });
+                    }
                     break;
                     
                 case 'leave-room':

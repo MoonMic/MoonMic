@@ -575,6 +575,10 @@ function handleSignalingMessage(event) {
         case 'user-mute-toggle':
             updateUserMuteStatus(data.userId, data.isMuted);
             break;
+            
+        case 'pong':
+            console.log('✅ Received pong from server:', data);
+            break;
     }
 }
 
@@ -967,6 +971,30 @@ function setupVoiceChatListeners() {
             console.log('Participants:', Array.from(voiceChat.participants.values()));
             console.log('Peer Connections:', Array.from(voiceChat.peerConnections.keys()));
             console.log('Local Stream:', voiceChat.localStream);
+            
+            // Test WebSocket connection
+            if (voiceChat.ws) {
+                console.log('WebSocket State:', voiceChat.ws.readyState);
+                console.log('WebSocket URL:', voiceChat.ws.url);
+                
+                // Send a test message
+                try {
+                    voiceChat.ws.send(JSON.stringify({
+                        type: 'ping',
+                        timestamp: Date.now()
+                    }));
+                    console.log('✅ Ping message sent successfully');
+                } catch (error) {
+                    console.error('❌ Failed to send ping:', error);
+                }
+            } else {
+                console.log('❌ No WebSocket connection');
+            }
+            
+            // Force update participants list
+            console.log('Forcing participants list update...');
+            updateParticipantsList();
+            
             console.log('==================');
         });
     }
