@@ -638,4 +638,34 @@
 
 .moonmic-container {
     pointer-events: auto;
+}
+
+/* Voice Meter Styles */
+.voice-meter-container {
+    width: 20px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-right: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.voice-meter {
+    height: 100%;
+    background-color: #9E9E9E;
+    border-radius: 4px;
+    transition: width 0.1s ease, background-color 0.2s ease;
+    min-width: 2px;
+}
+
+.voice-meter[data-user-id="local"] {
+    background-color: #4CAF50;
+}
+
+.moonmic-user-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 } 

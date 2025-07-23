@@ -438,6 +438,10 @@ async function initializeVoiceChat(username, roomId) {
             voiceChat.localStream.getAudioTracks().forEach(track => {
                 console.log('Audio track:', track.id, 'enabled:', track.enabled, 'muted:', track.muted);
             });
+            
+            // Set up local voice activity detection
+            setupVoiceActivityDetection('local', voiceChat.localStream);
+            
             voiceChat.username = username;
             voiceChat.roomId = roomId;
             
@@ -792,6 +796,9 @@ async function handleOffer(fromUserId, offer) {
         
         // Add to page (hidden)
         document.body.appendChild(audioElement);
+        
+        // Set up voice activity detection
+        setupVoiceActivityDetection(fromUserId, remoteStream);
         
         // Ensure audio plays
         audioElement.play().then(() => {
@@ -1192,6 +1199,9 @@ function updateParticipantsList() {
                 <span>${voiceChat.username} (You)</span>
             </div>
             <div class="moonmic-user-status">
+                <div class="voice-meter-container">
+                    <div class="voice-meter" data-user-id="local" style="width: 0%; background-color: #9E9E9E;"></div>
+                </div>
                 <span class="moonmic-mic-icon">${voiceChat.isMuted ? '🔇' : '🎤'}</span>
             </div>
         </div>
@@ -1224,6 +1234,9 @@ function updateParticipantsList() {
                     </div>
                 </div>
                 <div class="moonmic-user-status">
+                    <div class="voice-meter-container">
+                        <div class="voice-meter" data-user-id="${userId}" style="width: 0%; background-color: #9E9E9E;"></div>
+                    </div>
                     <span class="moonmic-mic-icon">${participant.isMuted ? '🔇' : '🎤'}</span>
                 </div>
             </div>
@@ -1448,6 +1461,73 @@ function updateUserMuteStatus(userId, isMuted) {
     if (audioElement) {
         audioElement.muted = isMuted;
         console.log('Updated audio element mute status for user:', userId, 'muted:', isMuted);
+    }
+}
+
+function setupVoiceActivityDetection(userId, stream) {
+    console.log('Setting up voice activity detection for user:', userId);
+    
+    // Create audio context for analyzing audio levels
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    
+    // Configure analyser
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.8;
+    
+    // Connect the audio nodes
+    source.connect(analyser);
+    
+    // Create data array for frequency analysis
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    // Store analyser for this user
+    if (!voiceChat.voiceAnalysers) {
+        voiceChat.voiceAnalysers = new Map();
+    }
+    voiceChat.voiceAnalysers.set(userId, analyser);
+    
+    // Function to update voice meter
+    function updateVoiceMeter() {
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Calculate average volume level
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+        }
+        const average = sum / dataArray.length;
+        
+        // Convert to percentage (0-100)
+        const volumeLevel = Math.min(100, (average / 128) * 100);
+        
+        // Update voice meter in UI
+        updateVoiceMeterUI(userId, volumeLevel);
+        
+        // Continue monitoring
+        requestAnimationFrame(updateVoiceMeter);
+    }
+    
+    // Start monitoring
+    updateVoiceMeter();
+}
+
+function updateVoiceMeterUI(userId, volumeLevel) {
+    // Find the voice meter element for this user
+    const voiceMeter = document.querySelector(`.voice-meter[data-user-id="${userId}"]`);
+    if (voiceMeter) {
+        // Update the meter width based on volume level
+        voiceMeter.style.width = `${volumeLevel}%`;
+        
+        // Change color based on activity level
+        if (volumeLevel > 30) {
+            voiceMeter.style.backgroundColor = '#4CAF50'; // Green for active
+        } else if (volumeLevel > 10) {
+            voiceMeter.style.backgroundColor = '#FF9800'; // Orange for low activity
+        } else {
+            voiceMeter.style.backgroundColor = '#9E9E9E'; // Gray for no activity
+        }
     }
 }
 
