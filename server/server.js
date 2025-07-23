@@ -140,18 +140,24 @@ wss.on('connection', (ws, req) => {
                         return;
                     }
                     
+                    log(`Processing offer`, { from: clientId, to: offerTargetUserId, roomId: currentRoom });
+                    
                     const targetUser = rooms.get(currentRoom)?.get(offerTargetUserId);
                     if (targetUser) {
                         try {
-                            targetUser.ws.send(JSON.stringify({
+                            const offerMessage = {
                                 type: 'offer',
                                 fromUserId: clientId,
                                 offer
-                            }));
-                                                            log(`Sent offer`, { from: clientId, to: offerTargetUserId });
-                            } catch (sendError) {
-                                log(`Failed to send offer message`, { error: sendError.message, targetUser: offerTargetUserId });
+                            };
+                            log(`Sending offer message`, { from: clientId, to: offerTargetUserId, message: offerMessage });
+                            targetUser.ws.send(JSON.stringify(offerMessage));
+                            log(`Sent offer`, { from: clientId, to: offerTargetUserId });
+                        } catch (sendError) {
+                            log(`Failed to send offer message`, { error: sendError.message, targetUser: offerTargetUserId });
                         }
+                    } else {
+                        log(`Target user not found for offer`, { targetUserId: offerTargetUserId, roomId: currentRoom, availableUsers: Array.from(rooms.get(currentRoom)?.keys() || []) });
                     }
                     break;
                     
@@ -164,18 +170,24 @@ wss.on('connection', (ws, req) => {
                         return;
                     }
                     
+                    log(`Processing answer`, { from: clientId, to: fromUserId, roomId: currentRoom });
+                    
                     const fromUser = rooms.get(currentRoom)?.get(fromUserId);
                     if (fromUser) {
                         try {
-                            fromUser.ws.send(JSON.stringify({
+                            const answerMessage = {
                                 type: 'answer',
                                 fromUserId: clientId,
                                 answer
-                            }));
+                            };
+                            log(`Sending answer message`, { from: clientId, to: fromUserId, message: answerMessage });
+                            fromUser.ws.send(JSON.stringify(answerMessage));
                             log(`Sent answer`, { from: clientId, to: fromUserId });
                         } catch (sendError) {
                             log(`Failed to send answer message`, { error: sendError.message, targetUser: fromUserId });
                         }
+                    } else {
+                        log(`From user not found for answer`, { fromUserId, roomId: currentRoom, availableUsers: Array.from(rooms.get(currentRoom)?.keys() || []) });
                     }
                     break;
                     
