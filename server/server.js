@@ -143,7 +143,7 @@ wss.on('connection', (ws, req) => {
                     log(`Processing offer`, { from: clientId, to: offerTargetUserId, roomId: currentRoom });
                     
                     const targetUser = rooms.get(currentRoom)?.get(offerTargetUserId);
-                    if (targetUser) {
+                    if (targetUser && targetUser.id !== clientId) {
                         try {
                             const offerMessage = {
                                 type: 'offer',
@@ -156,6 +156,8 @@ wss.on('connection', (ws, req) => {
                         } catch (sendError) {
                             log(`Failed to send offer message`, { error: sendError.message, targetUser: offerTargetUserId });
                         }
+                    } else if (targetUser && targetUser.id === clientId) {
+                        log(`Prevented sending offer to self`, { clientId, targetUserId: offerTargetUserId });
                     } else {
                         log(`Target user not found for offer`, { targetUserId: offerTargetUserId, roomId: currentRoom, availableUsers: Array.from(rooms.get(currentRoom)?.keys() || []) });
                     }
@@ -173,7 +175,7 @@ wss.on('connection', (ws, req) => {
                     log(`Processing answer`, { from: clientId, to: fromUserId, roomId: currentRoom });
                     
                     const fromUser = rooms.get(currentRoom)?.get(fromUserId);
-                    if (fromUser) {
+                    if (fromUser && fromUser.id !== clientId) {
                         try {
                             const answerMessage = {
                                 type: 'answer',
@@ -186,6 +188,8 @@ wss.on('connection', (ws, req) => {
                         } catch (sendError) {
                             log(`Failed to send answer message`, { error: sendError.message, targetUser: fromUserId });
                         }
+                    } else if (fromUser && fromUser.id === clientId) {
+                        log(`Prevented sending answer to self`, { clientId, fromUserId });
                     } else {
                         log(`From user not found for answer`, { fromUserId, roomId: currentRoom, availableUsers: Array.from(rooms.get(currentRoom)?.keys() || []) });
                     }
@@ -204,7 +208,7 @@ wss.on('connection', (ws, req) => {
                     if (iceTargetUserId) {
                         // New format: send to specific user
                         const targetUser = rooms.get(currentRoom)?.get(iceTargetUserId);
-                        if (targetUser) {
+                        if (targetUser && targetUser.id !== clientId) {
                             try {
                                 targetUser.ws.send(JSON.stringify({
                                     type: 'ice-candidate',
@@ -215,6 +219,10 @@ wss.on('connection', (ws, req) => {
                             } catch (sendError) {
                                 log(`Failed to send targeted ICE candidate`, { error: sendError.message, targetUser: iceTargetUserId });
                             }
+                        } else if (targetUser && targetUser.id === clientId) {
+                            log(`Prevented sending ICE candidate to self`, { clientId, targetUserId: iceTargetUserId });
+                        } else {
+                            log(`Target user not found for ICE candidate`, { targetUserId: iceTargetUserId, roomId: currentRoom });
                         }
                     } else {
                         // Old format: broadcast to all other users (fallback)
