@@ -552,9 +552,11 @@ function handleSignalingMessage(event) {
             voiceChat.participants.clear();
             
             data.participants.forEach(participant => {
+                console.log('🔍 Processing participant:', participant.id, participant.username);
                 if (participant.id !== voiceChat.localUserId) {
                     console.log('🔗 Creating peer connection for existing participant:', participant.id, participant.username);
                     voiceChat.participants.set(participant.id, participant);
+                    console.log('✅ Added participant to list:', participant.id, participant.username);
                     createPeerConnection(participant.id);
                 } else {
                     console.log('🔗 Skipping peer connection to self in room-joined:', participant.id);
@@ -562,7 +564,11 @@ function handleSignalingMessage(event) {
             });
             console.log('📊 Final participants after room-joined:', Array.from(voiceChat.participants.values()));
             console.log('👥 Total participants count:', voiceChat.participants.size + 1); // +1 for self
-            updateParticipantsList();
+            
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+                updateParticipantsList();
+            }, 100);
             break;
             
         case 'user-joined':
@@ -1193,7 +1199,11 @@ function setupVoiceChatListeners() {
 function updateParticipantsList() {
     const userList = document.getElementById('moonmic-user-list');
     if (!userList) {
-        console.error('User list element not found');
+        console.error('❌ User list element not found - will retry in 100ms');
+        // Retry after a short delay
+        setTimeout(() => {
+            updateParticipantsList();
+        }, 100);
         return;
     }
     
