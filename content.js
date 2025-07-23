@@ -1188,35 +1188,39 @@ function setupUserControls() {
         });
     });
     
-    // Setup volume sliders
+    // Setup volume sliders with auto-hide reset
     const volumeSliders = document.querySelectorAll('.moonmic-volume-slider');
     volumeSliders.forEach(slider => {
         slider.addEventListener('input', function() {
             const userId = this.getAttribute('data-user-id');
             const volume = this.value / 100; // Convert 0-100 to 0.0-1.0
             setUserVolume(userId, volume);
+            
+            // Reset auto-hide timeout when user interacts with slider
+            resetVolumeControlsTimeout(userId);
         });
         
-        // Auto-hide volume controls when user releases the slider
-        slider.addEventListener('change', function() {
+        // Also reset timeout on mousedown/touchstart for better responsiveness
+        slider.addEventListener('mousedown', function() {
             const userId = this.getAttribute('data-user-id');
-            // Add a small delay to allow the user to see the final value
-            setTimeout(() => {
-                hideVolumeControls(userId);
-            }, 500);
+            resetVolumeControlsTimeout(userId);
+        });
+        
+        slider.addEventListener('touchstart', function() {
+            const userId = this.getAttribute('data-user-id');
+            resetVolumeControlsTimeout(userId);
         });
     });
     
-    // Setup mute buttons
+    // Setup mute buttons with auto-hide reset
     const muteButtons = document.querySelectorAll('.moonmic-user-mute-btn');
     muteButtons.forEach(button => {
         button.addEventListener('click', function() {
             const userId = this.getAttribute('data-user-id');
             toggleUserMute(userId);
-            // Auto-hide volume controls after mute toggle
-            setTimeout(() => {
-                hideVolumeControls(userId);
-            }, 300);
+            
+            // Reset auto-hide timeout when user clicks mute button
+            resetVolumeControlsTimeout(userId);
         });
     });
 }
@@ -1231,14 +1235,10 @@ function toggleVolumeControls(userId) {
             
             if (isVisible) {
                 // If visible, hide them
-                controls.style.display = 'none';
+                hideVolumeControls(userId);
             } else {
-                // If hidden, hide all others first, then show this one
-                const allControls = document.querySelectorAll('.moonmic-user-controls');
-                allControls.forEach(control => {
-                    control.style.display = 'none';
-                });
-                controls.style.display = 'flex';
+                // If hidden, show them with auto-hide
+                showVolumeControls(userId);
             }
         }
     }
@@ -1249,6 +1249,12 @@ function showVolumeControls(userId) {
     const allControls = document.querySelectorAll('.moonmic-user-controls');
     allControls.forEach(control => {
         control.style.display = 'none';
+        control.style.opacity = '1';
+        // Clear any existing timeout
+        if (control.autoHideTimeout) {
+            clearTimeout(control.autoHideTimeout);
+            control.autoHideTimeout = null;
+        }
     });
     
     // Show controls for this specific user
@@ -1257,6 +1263,25 @@ function showVolumeControls(userId) {
         const controls = userItem.querySelector('.moonmic-user-controls');
         if (controls) {
             controls.style.display = 'flex';
+            controls.style.opacity = '1';
+            
+            // Set up auto-hide timeout (3.8 seconds)
+            if (controls.autoHideTimeout) {
+                clearTimeout(controls.autoHideTimeout);
+            }
+            
+            controls.autoHideTimeout = setTimeout(() => {
+                // Fade out effect
+                controls.style.transition = 'opacity 0.3s ease-out';
+                controls.style.opacity = '0';
+                
+                // Hide after fade completes
+                setTimeout(() => {
+                    controls.style.display = 'none';
+                    controls.style.opacity = '1';
+                    controls.autoHideTimeout = null;
+                }, 300);
+            }, 3800);
         }
     }
 }
@@ -1267,6 +1292,41 @@ function hideVolumeControls(userId) {
         const controls = userItem.querySelector('.moonmic-user-controls');
         if (controls) {
             controls.style.display = 'none';
+            // Clear any existing timeout
+            if (controls.autoHideTimeout) {
+                clearTimeout(controls.autoHideTimeout);
+                controls.autoHideTimeout = null;
+            }
+        }
+    }
+}
+
+function resetVolumeControlsTimeout(userId) {
+    const userItem = document.querySelector(`.moonmic-user-item[data-user-id="${userId}"]`);
+    if (userItem) {
+        const controls = userItem.querySelector('.moonmic-user-controls');
+        if (controls && controls.style.display === 'flex') {
+            // Clear existing timeout
+            if (controls.autoHideTimeout) {
+                clearTimeout(controls.autoHideTimeout);
+            }
+            
+            // Reset to full opacity
+            controls.style.opacity = '1';
+            controls.style.transition = 'opacity 0.3s ease-out';
+            
+            // Set new timeout (3.8 seconds)
+            controls.autoHideTimeout = setTimeout(() => {
+                // Fade out effect
+                controls.style.opacity = '0';
+                
+                // Hide after fade completes
+                setTimeout(() => {
+                    controls.style.display = 'none';
+                    controls.style.opacity = '1';
+                    controls.autoHideTimeout = null;
+                }, 300);
+            }, 3800);
         }
     }
 }
