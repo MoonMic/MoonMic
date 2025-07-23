@@ -391,7 +391,7 @@
 }
 
 .moonmic-test-btn {
-    background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);
+    background: linear-gradient(135deg, #7C3AED 0%, #5F1A9B 100%);
     color: white;
     border: none;
     border-radius: 6px;
@@ -407,7 +407,7 @@
 }
 
 .moonmic-test-btn:hover {
-    background: linear-gradient(135deg, #2980B9 0%, #1F5F8B 100%);
+    background: linear-gradient(135deg, #5F1A9B 0%, #4C1D95 100%);
     transform: translateY(-1px);
 }
 
