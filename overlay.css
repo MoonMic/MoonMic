@@ -361,17 +361,19 @@
 
 .moonmic-voice-controls {
     display: flex;
-    gap: 8px;
-    margin-left: -20px;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
 }
 
 .moonmic-mute-btn {
     background: linear-gradient(135deg, #5F1A9B 0%, #7B2BC7 100%);
     color: white;
     border: none;
-    border-radius: 6px;
-    padding: 12px 32px;
-    font-size: 14px;
+    border-radius: 8px;
+    padding: 14px 24px;
+    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -379,7 +381,9 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-width: 180px;
+    min-width: 120px;
+    flex: 1;
+    max-width: 140px;
 }
 
 .moonmic-mute-btn:hover {
@@ -390,41 +394,24 @@
     background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
 }
 
-.moonmic-test-btn {
-    background: linear-gradient(135deg, #7C3AED 0%, #5F1A9B 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 80px;
-}
 
-.moonmic-test-btn:hover {
-    background: linear-gradient(135deg, #5F1A9B 0%, #4C1D95 100%);
-    transform: translateY(-1px);
-}
 
 .moonmic-leave-btn {
     background: linear-gradient(135deg, #4A5568 0%, #2D3748 100%);
     color: white;
     border: none;
-    border-radius: 6px;
-    padding: 12px 20px;
-    font-size: 14px;
+    border-radius: 8px;
+    padding: 14px 24px;
+    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 100px;
+    min-width: 120px;
+    flex: 1;
+    max-width: 140px;
 }
 
 .moonmic-leave-btn:hover {

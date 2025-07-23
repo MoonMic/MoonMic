@@ -949,7 +949,7 @@ function updateParticipantsList() {
     // Add current user first
     html += `
         <div class="moonmic-user-item you">
-            <div class="moonmic-user-info">
+            <div class="moonmic-user-info moonmic-username-clickable">
                 <span>${voiceChat.username} (You)</span>
             </div>
             <div class="moonmic-user-status">
@@ -960,10 +960,28 @@ function updateParticipantsList() {
     
     // Add other participants
     voiceChat.participants.forEach(participant => {
+        const userId = participant.id;
+        const isUserMuted = voiceChat.userMutes.get(userId) || false;
+        const userVolume = voiceChat.userVolumes.get(userId) || 1.0;
+        
         html += `
-            <div class="moonmic-user-item" data-user-id="${participant.id}">
-                <div class="moonmic-user-info">
+            <div class="moonmic-user-item" data-user-id="${userId}">
+                <div class="moonmic-user-info moonmic-username-clickable" data-user-id="${userId}">
                     <span>${participant.username}</span>
+                </div>
+                <div class="moonmic-user-controls" style="display: none;">
+                    <button class="moonmic-user-mute-btn" data-user-id="${userId}" title="Mute/Unmute user">
+                        <span class="moonmic-speaker-icon">${isUserMuted ? '🔇' : '🔊'}</span>
+                    </button>
+                    <div class="moonmic-volume-control">
+                        <input type="range" 
+                               class="moonmic-volume-slider" 
+                               data-user-id="${userId}"
+                               min="0" 
+                               max="100" 
+                               value="${Math.round(userVolume * 100)}"
+                               title="Adjust volume">
+                    </div>
                 </div>
                 <div class="moonmic-user-status">
                     <span class="moonmic-mic-icon">${participant.isMuted ? '🔇' : '🎤'}</span>
@@ -973,6 +991,9 @@ function updateParticipantsList() {
     });
     
     userList.innerHTML = html;
+    
+    // Setup volume and mute controls
+    setupUserControls();
 }
 
 function setupUserControls() {
@@ -1118,38 +1139,7 @@ function updateUserMuteStatus(userId, isMuted) {
     }
 }
 
-function testAudioConnection() {
-    alert('Test button clicked! Check console for details.');
-    console.log('=== AUDIO CONNECTION TEST ===');
-    console.log('Test button clicked!');
-    console.log('Local stream tracks:', voiceChat.localStream?.getTracks().length || 0);
-    console.log('Peer connections:', voiceChat.peerConnections.size);
-    console.log('Participants:', voiceChat.participants.size);
-    
-    voiceChat.peerConnections.forEach((pc, userId) => {
-        console.log(`Peer connection for ${userId}:`);
-        console.log('  - Connection state:', pc.connectionState);
-        console.log('  - ICE connection state:', pc.iceConnectionState);
-        console.log('  - ICE gathering state:', pc.iceGatheringState);
-        console.log('  - Remote tracks:', pc.getReceivers().length);
-    });
-    
-    voiceChat.participants.forEach((participant, userId) => {
-        const audioElement = document.getElementById(`audio-${userId}`);
-        console.log(`Audio element for ${participant.username} (${userId}):`);
-        console.log('  - Element exists:', !!audioElement);
-        if (audioElement) {
-            console.log('  - Ready state:', audioElement.readyState);
-            console.log('  - Paused:', audioElement.paused);
-            console.log('  - Muted:', audioElement.muted);
-            console.log('  - Volume:', audioElement.volume);
-            console.log('  - Current time:', audioElement.currentTime);
-            console.log('  - Duration:', audioElement.duration);
-            console.log('  - Has srcObject:', !!audioElement.srcObject);
-        }
-    });
-    console.log('=== END AUDIO TEST ===');
-}
+
 
 // Initialize overlay as hidden
 document.addEventListener('DOMContentLoaded', function() {
