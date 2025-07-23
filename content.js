@@ -1511,6 +1511,15 @@ function toggleUserMute(userId) {
             speakerIcon.textContent = newMuteState ? '🔇' : '🔊';
         }
     }
+    
+    // Update the mic emoji in the user status area
+    const userItem = document.querySelector(`.moonmic-user-item[data-user-id="${userId}"]`);
+    if (userItem) {
+        const micIcon = userItem.querySelector('.moonmic-mic-icon');
+        if (micIcon) {
+            micIcon.textContent = newMuteState ? '🔇' : '🎤';
+        }
+    }
 }
 
 function updateUserMuteStatus(userId, isMuted) {
