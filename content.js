@@ -959,25 +959,23 @@ function setupVoiceChatListeners() {
     if (debugBtn) {
         console.log('Debug button found, adding event listener');
         debugBtn.addEventListener('click', () => {
-            alert('Debug button clicked! Check console for details.');
-            console.log('=== DEBUG INFO ===');
-            console.log('Voice Chat State:', {
+            // Create debug info
+            const debugInfo = {
                 username: voiceChat.username,
                 roomId: voiceChat.roomId,
                 localUserId: voiceChat.localUserId,
                 isMuted: voiceChat.isMuted,
                 wsConnected: !!voiceChat.ws,
                 participantsCount: voiceChat.participants.size,
-                peerConnectionsCount: voiceChat.peerConnections.size
-            });
-            console.log('Participants:', Array.from(voiceChat.participants.values()));
-            console.log('Peer Connections:', Array.from(voiceChat.peerConnections.keys()));
-            console.log('Local Stream:', voiceChat.localStream);
+                peerConnectionsCount: voiceChat.peerConnections.size,
+                participants: Array.from(voiceChat.participants.values()),
+                peerConnections: Array.from(voiceChat.peerConnections.keys())
+            };
             
             // Test WebSocket connection
+            let wsTest = '❌ No WebSocket connection';
             if (voiceChat.ws) {
-                console.log('WebSocket State:', voiceChat.ws.readyState);
-                console.log('WebSocket URL:', voiceChat.ws.url);
+                wsTest = `✅ WebSocket connected (State: ${voiceChat.ws.readyState})`;
                 
                 // Send a test message
                 try {
@@ -985,19 +983,66 @@ function setupVoiceChatListeners() {
                         type: 'ping',
                         timestamp: Date.now()
                     }));
-                    console.log('✅ Ping message sent successfully');
+                    wsTest += '\n✅ Ping sent successfully';
                 } catch (error) {
-                    console.error('❌ Failed to send ping:', error);
+                    wsTest += `\n❌ Ping failed: ${error.message}`;
                 }
-            } else {
-                console.log('❌ No WebSocket connection');
             }
             
-            // Force update participants list
-            console.log('Forcing participants list update...');
-            updateParticipantsList();
+            // Create debug popup
+            const debugPopup = document.createElement('div');
+            debugPopup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #1a1a1a;
+                color: white;
+                padding: 20px;
+                border-radius: 8px;
+                border: 2px solid #333;
+                z-index: 1000000;
+                max-width: 500px;
+                max-height: 400px;
+                overflow-y: auto;
+                font-family: monospace;
+                font-size: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            `;
             
-            console.log('==================');
+            debugPopup.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #00ff00;">🔍 Debug Info</h3>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">✕</button>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Username:</strong> ${debugInfo.username || 'Not set'}<br>
+                    <strong>Room ID:</strong> ${debugInfo.roomId || 'Not set'}<br>
+                    <strong>Local User ID:</strong> ${debugInfo.localUserId || 'Not set'}<br>
+                    <strong>Muted:</strong> ${debugInfo.isMuted ? 'Yes' : 'No'}<br>
+                    <strong>WebSocket:</strong> ${debugInfo.wsConnected ? 'Connected' : 'Not connected'}<br>
+                    <strong>Participants:</strong> ${debugInfo.participantsCount}<br>
+                    <strong>Peer Connections:</strong> ${debugInfo.peerConnectionsCount}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>WebSocket Test:</strong><br>
+                    <pre style="background: #333; padding: 8px; border-radius: 4px; margin: 5px 0; white-space: pre-wrap;">${wsTest}</pre>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Participants:</strong><br>
+                    <pre style="background: #333; padding: 8px; border-radius: 4px; margin: 5px 0; white-space: pre-wrap;">${JSON.stringify(debugInfo.participants, null, 2)}</pre>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Peer Connections:</strong><br>
+                    <pre style="background: #333; padding: 8px; border-radius: 4px; margin: 5px 0; white-space: pre-wrap;">${JSON.stringify(debugInfo.peerConnections, null, 2)}</pre>
+                </div>
+                <button onclick="this.parentElement.remove()" style="background: #444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: 100%;">Close</button>
+            `;
+            
+            document.body.appendChild(debugPopup);
+            
+            // Force update participants list
+            updateParticipantsList();
         });
     } else {
         console.error('Debug button not found!');
