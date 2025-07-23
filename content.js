@@ -903,13 +903,15 @@ function showVoiceChatUI() {
     
     mainContent.innerHTML = `
         <div class="moonmic-voice-chat">
-            <div class="moonmic-voice-controls">
-                <button class="moonmic-mute-btn" id="moonmic-mute-btn">
-                    🎤 Mute
-                </button>
-                <button class="moonmic-leave-btn" id="moonmic-leave-btn">
-                    Leave
-                </button>
+            <div class="moonmic-voice-panel">
+                <div class="moonmic-voice-controls">
+                    <button class="moonmic-mute-btn" id="moonmic-mute-btn">
+                        🎤 Mute
+                    </button>
+                    <button class="moonmic-leave-btn" id="moonmic-leave-btn">
+                        Leave
+                    </button>
+                </div>
             </div>
             <div class="moonmic-users-section">
                 <div class="moonmic-users-header">

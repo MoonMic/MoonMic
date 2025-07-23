@@ -336,6 +336,12 @@
     overflow: hidden;
 }
 
+.moonmic-voice-panel {
+    background: linear-gradient(135deg, #1A0B3A 0%, #2D1B69 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+}
+
 .moonmic-voice-header {
     display: flex;
     justify-content: space-between;
@@ -361,28 +367,29 @@
 
 .moonmic-voice-controls {
     display: flex;
-    gap: 15px;
+    gap: 20px;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 0;
 }
 
 .moonmic-mute-btn {
     background: linear-gradient(135deg, #5F1A9B 0%, #7B2BC7 100%);
     color: white;
     border: none;
-    border-radius: 8px;
-    padding: 16px 32px;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 12px;
+    padding: 18px 40px;
+    font-size: 18px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    width: 220px;
+    gap: 12px;
+    width: 200px;
     flex: none;
+    box-shadow: 0 4px 15px rgba(95, 26, 155, 0.3);
 }
 
 .moonmic-mute-btn:hover {
@@ -399,17 +406,18 @@
     background: linear-gradient(135deg, #4A5568 0%, #2D3748 100%);
     color: white;
     border: none;
-    border-radius: 8px;
-    padding: 16px 24px;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 12px;
+    padding: 18px 32px;
+    font-size: 18px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 120px;
+    width: 140px;
     flex: none;
+    box-shadow: 0 4px 15px rgba(74, 85, 104, 0.3);
 }
 
 .moonmic-leave-btn:hover {
