@@ -1083,6 +1083,13 @@ function setupVoiceChatListeners() {
                 const originalOnMessage = voiceChat.ws.onmessage;
                 voiceChat.ws.onmessage = (event) => {
                     console.log('🔍 DEBUG: Raw message received:', event.data);
+                    // Parse and log the message type
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('🔍 DEBUG: Message type:', data.type);
+                    } catch (error) {
+                        console.log('🔍 DEBUG: Failed to parse message:', error);
+                    }
                     if (originalOnMessage) {
                         originalOnMessage(event);
                     }
