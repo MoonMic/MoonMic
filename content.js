@@ -563,7 +563,11 @@ function handleSignalingMessage(event) {
                     console.log('🔗 Creating peer connection for existing participant:', participant.id, participant.username);
                     voiceChat.participants.set(participant.id, participant);
                     console.log('✅ Added participant to list:', participant.id, participant.username);
-                    createPeerConnection(participant.id);
+                    
+                    // Add a small delay to prevent simultaneous offer creation
+                    setTimeout(() => {
+                        createPeerConnection(participant.id);
+                    }, Math.random() * 1000); // Random delay 0-1 second
                 } else {
                     console.log('🔗 Skipping peer connection to self in room-joined:', participant.id);
                 }
@@ -652,6 +656,16 @@ async function createPeerConnection(remoteUserId) {
             console.log('✅ WebRTC connection established for user:', remoteUserId);
         } else if (pc.connectionState === 'failed') {
             console.error('❌ WebRTC connection failed for user:', remoteUserId);
+            console.error('🔍 Attempting to restart connection for user:', remoteUserId);
+            
+            // Try to restart the connection after a delay
+            setTimeout(() => {
+                if (voiceChat.peerConnections.has(remoteUserId)) {
+                    console.log('🔄 Restarting peer connection for user:', remoteUserId);
+                    voiceChat.peerConnections.delete(remoteUserId);
+                    createPeerConnection(remoteUserId);
+                }
+            }, 2000);
         }
     };
     
@@ -900,6 +914,18 @@ async function handleAnswer(fromUserId, answer) {
             if (pc.signalingState === 'have-local-offer') {
                 await pc.setRemoteDescription(answer);
                 console.log('Remote description set from answer for user:', fromUserId);
+            } else if (pc.signalingState === 'stable') {
+                console.warn('⚠️ Signaling state conflict detected - attempting rollback for user:', fromUserId);
+                try {
+                    // Try to rollback and set the answer
+                    await Promise.all([
+                        pc.setLocalDescription({ type: 'rollback' }),
+                        pc.setRemoteDescription(answer)
+                    ]);
+                    console.log('✅ Rollback successful, remote description set for user:', fromUserId);
+                } catch (rollbackError) {
+                    console.error('❌ Rollback failed for user:', fromUserId, rollbackError);
+                }
             } else {
                 console.warn('⚠️ Cannot set remote description - wrong signaling state:', pc.signalingState, 'for user:', fromUserId);
                 console.warn('⚠️ This usually means both users tried to create offers simultaneously');
