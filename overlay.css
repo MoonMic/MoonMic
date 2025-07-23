@@ -361,10 +361,10 @@
 
 .moonmic-voice-controls {
     display: flex;
-    gap: 12px;
+    gap: 15px;
     justify-content: center;
     align-items: center;
-    padding: 16px;
+    padding: 20px;
 }
 
 .moonmic-mute-btn {
@@ -372,7 +372,7 @@
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 14px 24px;
+    padding: 16px 32px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -380,10 +380,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    min-width: 200px;
-    flex: 2;
-    max-width: 240px;
+    gap: 10px;
+    width: 220px;
+    flex: none;
 }
 
 .moonmic-mute-btn:hover {
@@ -401,7 +400,7 @@
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 14px 24px;
+    padding: 16px 24px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -409,9 +408,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 100px;
-    flex: 1;
-    max-width: 120px;
+    width: 120px;
+    flex: none;
 }
 
 .moonmic-leave-btn:hover {
