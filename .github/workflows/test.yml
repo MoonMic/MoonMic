@@ -60,12 +60,12 @@ jobs:
     - name: Check for security issues
       run: |
         # Check for hardcoded secrets
-        if grep -r "ghp_" . --exclude-dir=.git; then
+        if grep -r "ghp_" . --exclude-dir=.git --exclude=./.github/workflows/test.yml; then
           echo "❌ Found potential GitHub token in code"
           exit 1
         fi
         
-        if grep -r "sk_" . --exclude-dir=.git; then
+        if grep -r "sk_" . --exclude-dir=.git --exclude=./.github/workflows/test.yml; then
           echo "❌ Found potential secret key in code"
           exit 1
         fi
