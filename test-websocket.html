@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <button onclick="testConnection()">Test WebSocket Connection</button>
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<div>' + new Date().toISOString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+
+        function testConnection() {
+            log('Starting WebSocket test...');
+            
+            const ws = new WebSocket('wss://moonmic-production.up.railway.app/');
+            
+            ws.onopen = () => {
+                log('✅ WebSocket connected!');
+                
+                // Send a test message
+                const testMessage = {
+                    type: 'echo',
+                    message: 'Hello from test client!'
+                };
+                ws.send(JSON.stringify(testMessage));
+                log('📤 Sent echo message: ' + JSON.stringify(testMessage));
+            };
+            
+            ws.onmessage = (event) => {
+                log('📥 Received message: ' + event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    log('📥 Parsed message type: ' + data.type);
+                } catch (error) {
+                    log('❌ Failed to parse message: ' + error);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                log('❌ WebSocket error: ' + error);
+            };
+            
+            ws.onclose = () => {
+                log('🔌 WebSocket closed');
+            };
+        }
+    </script>
+</body>
+</html> 
